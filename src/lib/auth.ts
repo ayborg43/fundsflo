@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import { findUserById } from "./users";
+import type { User } from "./types";
 
 const COOKIE_NAME = "freeze_fund_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
@@ -69,4 +71,19 @@ export async function getSessionUserId(): Promise<string | null> {
 export async function clearSession(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
+}
+
+// The session cookie can be validly signed while pointing at a user that no
+// longer exists (e.g. deleted, or a dev DB reset). Always resolve through
+// here rather than trusting getSessionUserId() alone, so a dead session
+// reads as "logged out" instead of endlessly bouncing between "/" and
+// "/login". This is called from Server Components, which can't mutate
+// cookies, so it deliberately does not clear the stale cookie itself —
+// that happens naturally on the next real login/logout.
+export async function getCurrentUser(): Promise<User | null> {
+  const userId = await getSessionUserId();
+  if (!userId) return null;
+
+  const user = await findUserById(userId);
+  return user ?? null;
 }
