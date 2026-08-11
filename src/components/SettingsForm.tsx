@@ -15,6 +15,33 @@ export default function SettingsForm({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportResult(null);
+    setImportError(null);
+    try {
+      const text = await file.text();
+      const res = await fetch("/api/import", {
+        method: "POST",
+        headers: { "Content-Type": "text/csv" },
+        body: text,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Import failed");
+      setImportResult(`Imported ${data.imported} transaction${data.imported === 1 ? "" : "s"}!`);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
+  }
 
   async function save(next: string) {
     setSelected(next);
@@ -86,6 +113,44 @@ export default function SettingsForm({
         {error && (
           <p className="font-display text-sm text-white bg-orange mt-4 text-center rounded-2xl py-2" style={{ backgroundColor: "var(--gus-orange)" }}>
             {error}
+          </p>
+        )}
+
+        <h2 className="font-display text-xl text-navy mb-3 mt-6">Data</h2>
+        <div className="flex flex-col gap-3">
+          <a
+            href="/api/export"
+            data-testid="export-csv-link"
+            className="chunky-btn py-3 px-4 text-center text-lg"
+            style={{ backgroundColor: "white" }}
+          >
+            ⬇️ Export CSV
+          </a>
+          <label
+            data-testid="import-csv-label"
+            className="chunky-btn py-3 px-4 text-center text-lg cursor-pointer"
+            style={{ backgroundColor: "white" }}
+          >
+            {importing ? "Importing..." : "⬆️ Import CSV"}
+            <input
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImport}
+              disabled={importing}
+              data-testid="import-csv-input"
+            />
+          </label>
+        </div>
+        {importResult && (
+          <p className="font-display text-sm text-navy mt-2 text-center">{importResult}</p>
+        )}
+        {importError && (
+          <p
+            className="font-display text-sm text-white mt-2 text-center rounded-2xl py-2"
+            style={{ backgroundColor: "var(--gus-orange)" }}
+          >
+            {importError}
           </p>
         )}
       </div>

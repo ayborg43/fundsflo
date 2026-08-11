@@ -29,6 +29,13 @@
       "when": 1786476863503,
       "tag": "0003_conscious_dark_beast",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786478931278,
+      "tag": "0004_crazy_wiccan",
+      "breakpoints": true
     }
   ]
 }

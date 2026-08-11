@@ -52,3 +52,22 @@ export type User = {
   currency: string;
   createdAt: string;
 };
+
+export type Budget = {
+  id: string;
+  categoryId: string;
+  monthlyLimit: number;
+  spentThisMonth: number;
+  createdAt: string;
+};
+
+export type Bill = {
+  id: string;
+  name: string;
+  amount: number;
+  dueDayOfMonth: number;
+  accountId: string | null;
+  categoryId: string | null;
+  lastPaidAt: string | null;
+  createdAt: string;
+};

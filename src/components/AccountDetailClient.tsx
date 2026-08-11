@@ -6,6 +6,7 @@ import type { AccountDetail, Category, TransactionType } from "@/lib/types";
 import AppHeader from "@/components/AppHeader";
 import BalanceCard from "@/components/BalanceCard";
 import DebtMonster from "@/components/DebtMonster";
+import InvestmentTree from "@/components/InvestmentTree";
 import MoneyButtons from "@/components/MoneyButtons";
 import AmountEntryModal from "@/components/AmountEntryModal";
 import GoalTimeline from "@/components/GoalTimeline";
@@ -130,6 +131,8 @@ export default function AccountDetailClient({
           startingBalance={account.startingBalance ?? 0}
           currency={currency}
         />
+      ) : account.type === "investment" ? (
+        <InvestmentTree balance={account.balance} currency={currency} />
       ) : (
         <BalanceCard balance={account.balance} currency={currency} />
       )}

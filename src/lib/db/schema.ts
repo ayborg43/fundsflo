@@ -78,3 +78,29 @@ export const aiMessages = pgTable("ai_messages", {
   content: text("content").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const budgets = pgTable("budgets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  categoryId: uuid("category_id")
+    .notNull()
+    .references(() => categories.id, { onDelete: "cascade" }),
+  monthlyLimit: numeric("monthly_limit", { mode: "number" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const recurringBills = pgTable("recurring_bills", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id").references(() => accounts.id, { onDelete: "set null" }),
+  categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  amount: numeric("amount", { mode: "number" }).notNull(),
+  dueDayOfMonth: numeric("due_day_of_month", { mode: "number" }).notNull(),
+  lastPaidAt: timestamp("last_paid_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
