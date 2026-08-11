@@ -3,9 +3,11 @@ import { formatMoney, formatRelativeTime } from "@/lib/format";
 
 export default function TransactionFeed({
   transactions,
+  currency,
   onDelete,
 }: {
   transactions: Transaction[];
+  currency: string;
   onDelete: (id: string) => void;
 }) {
   return (
@@ -43,7 +45,7 @@ export default function TransactionFeed({
                       style={{ color: isMake ? "rgb(88, 160, 30)" : "rgb(214, 50, 26)" }}
                     >
                       {isMake ? "+" : "−"}
-                      {formatMoney(tx.amount)}
+                      {formatMoney(tx.amount, currency)}
                     </span>
                     {tx.tag && (
                       <span

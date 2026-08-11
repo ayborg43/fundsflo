@@ -51,11 +51,21 @@ export async function authenticateUser(email: string, password: string): Promise
   return valid ? user : null;
 }
 
+export async function updateUserCurrency(userId: string, currency: string): Promise<User | null> {
+  const [updated] = await db
+    .update(users)
+    .set({ currency })
+    .where(eq(users.id, userId))
+    .returning();
+  return updated ? toUser(updated) : null;
+}
+
 function toUser(row: typeof users.$inferSelect): User {
   return {
     id: row.id,
     email: row.email,
     passwordHash: row.passwordHash,
+    currency: row.currency,
     createdAt: row.createdAt.toISOString(),
   };
 }

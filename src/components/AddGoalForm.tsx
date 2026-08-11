@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { getCurrencySymbol } from "@/lib/currency";
 
 export default function AddGoalForm({
   onAdd,
+  currency,
 }: {
   onAdd: (name: string, price: number) => void;
+  currency: string;
 }) {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -44,7 +47,7 @@ export default function AddGoalForm({
         <div className="flex gap-3">
           <div className="relative flex-1">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 font-display text-xl sm:text-2xl text-navy pointer-events-none">
-              $
+              {getCurrencySymbol(currency)}
             </span>
             <input
               data-testid="goal-price-input"

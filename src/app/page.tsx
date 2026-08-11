@@ -6,5 +6,5 @@ export default async function Home() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  return <HomeClient email={user.email} />;
+  return <HomeClient email={user.email} currency={user.currency} />;
 }

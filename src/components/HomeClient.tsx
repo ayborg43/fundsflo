@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Account, TransactionType } from "@/lib/types";
 import BalanceCard from "@/components/BalanceCard";
 import MoneyButtons from "@/components/MoneyButtons";
@@ -11,7 +12,7 @@ import AddGoalForm from "@/components/AddGoalForm";
 import TransactionFeed from "@/components/TransactionFeed";
 import Confetti, { makeConfettiPieces } from "@/components/Confetti";
 
-export default function HomeClient({ email }: { email: string }) {
+export default function HomeClient({ email, currency }: { email: string; currency: string }) {
   const router = useRouter();
   const [account, setAccount] = useState<Account | null>(null);
   const [modalType, setModalType] = useState<TransactionType | null>(null);
@@ -83,7 +84,13 @@ export default function HomeClient({ email }: { email: string }) {
   return (
     <div data-testid="fundsflow-app" className="max-w-2xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7">
       <header className="flex items-center justify-between mb-6 gap-2">
-        <div className="w-16 sm:w-24" />
+        <Link
+          href="/settings"
+          data-testid="settings-link"
+          className="font-display text-xs sm:text-sm text-navy/70 underline w-16 sm:w-24"
+        >
+          Settings
+        </Link>
         <h1 className="font-display text-4xl sm:text-5xl text-navy tracking-tight text-center">
           FUNDSFLOW
         </h1>
@@ -102,11 +109,20 @@ export default function HomeClient({ email }: { email: string }) {
         {email}
       </p>
 
-      <BalanceCard balance={account.balance} />
+      <BalanceCard balance={account.balance} currency={currency} />
       <MoneyButtons onOpen={setModalType} />
-      <GoalTimeline balance={account.balance} goals={account.goals} onDelete={handleDeleteGoal} />
-      <AddGoalForm onAdd={handleAddGoal} />
-      <TransactionFeed transactions={account.transactions} onDelete={handleDeleteTransaction} />
+      <GoalTimeline
+        balance={account.balance}
+        goals={account.goals}
+        currency={currency}
+        onDelete={handleDeleteGoal}
+      />
+      <AddGoalForm onAdd={handleAddGoal} currency={currency} />
+      <TransactionFeed
+        transactions={account.transactions}
+        currency={currency}
+        onDelete={handleDeleteTransaction}
+      />
 
       <div className="text-center font-display text-sm text-navy/60 mt-6">
         keep stacking 💰
@@ -115,6 +131,7 @@ export default function HomeClient({ email }: { email: string }) {
       {modalType && (
         <AmountEntryModal
           type={modalType}
+          currency={currency}
           onClose={() => setModalType(null)}
           onConfirm={handleConfirmTransaction}
         />

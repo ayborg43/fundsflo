@@ -1,6 +1,6 @@
 import { formatMoney } from "@/lib/format";
 
-export default function BalanceCard({ balance }: { balance: number }) {
+export default function BalanceCard({ balance, currency }: { balance: number; currency: string }) {
   return (
     <div
       data-testid="balance-card"
@@ -15,7 +15,7 @@ export default function BalanceCard({ balance }: { balance: number }) {
           data-testid="balance-amount"
           className="font-display text-5xl sm:text-7xl text-navy break-all"
         >
-          {formatMoney(balance)}
+          {formatMoney(balance, currency)}
         </div>
         <div className="font-display text-sm sm:text-base text-navy/70 mt-2">
           Keep stacking! 💰

@@ -12,10 +12,12 @@ function logPercent(value: number, max: number): number {
 export default function GoalTimeline({
   balance,
   goals,
+  currency,
   onDelete,
 }: {
   balance: number;
   goals: Goal[];
+  currency: string;
   onDelete: (id: string) => void;
 }) {
   if (goals.length === 0) {
@@ -126,7 +128,7 @@ export default function GoalTimeline({
                 className="font-display text-xs sm:text-sm text-white px-2.5 py-1 rounded-full border-2 border-navy whitespace-nowrap"
                 style={{ backgroundColor: "var(--gus-orange)", boxShadow: "var(--gus-navy) 0px 3px 0px 0px" }}
               >
-                YOU: {formatMoney(balance)}
+                YOU: {formatMoney(balance, currency)}
               </div>
               <div
                 className="w-0 h-0 mx-auto"
@@ -154,7 +156,7 @@ export default function GoalTimeline({
                   className="font-display text-sm sm:text-base text-navy mt-1"
                   style={{ textDecoration: reached ? "line-through" : "none", opacity: reached ? 0.65 : 1 }}
                 >
-                  {formatMoney(goal.price)}
+                  {formatMoney(goal.price, currency)}
                 </div>
               </div>
             );

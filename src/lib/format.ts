@@ -1,7 +1,10 @@
-export function formatMoney(value: number): string {
+import { getCurrencySymbol } from "./currency";
+
+export function formatMoney(value: number, currency: string = "USD"): string {
   const sign = value < 0 ? "-" : "";
   const abs = Math.abs(value);
-  return `${sign}$${abs.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+  const symbol = getCurrencySymbol(currency);
+  return `${sign}${symbol}${abs.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 }
 
 export function formatRelativeTime(isoTimestamp: string): string {

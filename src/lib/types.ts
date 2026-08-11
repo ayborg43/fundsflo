@@ -26,5 +26,6 @@ export type User = {
   id: string;
   email: string;
   passwordHash: string;
+  currency: string;
   createdAt: string;
 };

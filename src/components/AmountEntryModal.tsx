@@ -8,10 +8,12 @@ const TAGS = ["cash", "venmo"] as const;
 
 export default function AmountEntryModal({
   type,
+  currency,
   onClose,
   onConfirm,
 }: {
   type: TransactionType;
+  currency: string;
   onClose: () => void;
   onConfirm: (amount: number, description: string, tag: string | null) => void;
 }) {
@@ -79,7 +81,7 @@ export default function AmountEntryModal({
             color: isMake ? undefined : "#fff",
           }}
         >
-          {formatMoney(amount)}
+          {formatMoney(amount, currency)}
         </div>
 
         {isMake ? (
@@ -148,7 +150,7 @@ export default function AmountEntryModal({
           className="chunky-btn w-full py-4 text-2xl sm:text-3xl text-navy"
           style={{ backgroundColor: isMake ? "var(--gus-lime)" : "var(--gus-orange)" }}
         >
-          ADD {formatMoney(amount)}
+          ADD {formatMoney(amount, currency)}
         </button>
       </div>
     </div>
