@@ -47,12 +47,27 @@ export async function createAccount(
     })
     .returning();
 
+  // A debt account's starting balance should be reflected immediately, not
+  // require a separate manual transaction -- seed it as the account's first
+  // "spend" (a debt account's balance is stored negative; see recomputeBalance).
+  let balance = 0;
+  if (input.startingBalance && input.startingBalance > 0) {
+    await db.insert(transactions).values({
+      userId,
+      accountId: created.id,
+      type: "spend",
+      amount: input.startingBalance,
+      description: "Starting balance",
+    });
+    balance = -input.startingBalance;
+  }
+
   return {
     id: created.id,
     name: created.name,
     type: created.type as AccountType,
     startingBalance: created.startingBalance,
-    balance: 0,
+    balance,
     createdAt: created.createdAt.toISOString(),
   };
 }

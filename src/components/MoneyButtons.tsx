@@ -4,8 +4,10 @@ import type { TransactionType } from "@/lib/types";
 
 export default function MoneyButtons({
   onOpen,
+  isDebt,
 }: {
   onOpen: (type: TransactionType) => void;
+  isDebt?: boolean;
 }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-5">
@@ -16,8 +18,10 @@ export default function MoneyButtons({
         style={{ backgroundColor: "var(--gus-lime)" }}
       >
         <span className="text-3xl sm:text-4xl">+</span>
-        <span>MAKE</span>
-        <span className="text-base sm:text-lg font-display opacity-80">MONEY</span>
+        <span>{isDebt ? "PAY" : "MAKE"}</span>
+        <span className="text-base sm:text-lg font-display opacity-80">
+          {isDebt ? "DOWN" : "MONEY"}
+        </span>
       </button>
       <button
         data-testid="spend-money-btn"
@@ -26,8 +30,10 @@ export default function MoneyButtons({
         style={{ backgroundColor: "var(--gus-orange)" }}
       >
         <span className="text-3xl sm:text-4xl">−</span>
-        <span>SPEND</span>
-        <span className="text-base sm:text-lg font-display opacity-90">MONEY</span>
+        <span>{isDebt ? "ADD" : "SPEND"}</span>
+        <span className="text-base sm:text-lg font-display opacity-90">
+          {isDebt ? "CHARGE" : "MONEY"}
+        </span>
       </button>
     </div>
   );

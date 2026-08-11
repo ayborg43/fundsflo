@@ -5,11 +5,13 @@ export default function TransactionFeed({
   transactions,
   currency,
   categories,
+  isDebt,
   onDelete,
 }: {
   transactions: Transaction[];
   currency: string;
   categories: Category[];
+  isDebt?: boolean;
   onDelete: (id: string) => void;
 }) {
   const categoryById = new Map(categories.map((c) => [c.id, c]));
@@ -28,7 +30,8 @@ export default function TransactionFeed({
         <ul className="space-y-3">
           {transactions.map((tx) => {
             const isMake = tx.type === "make";
-            const label = tx.description || (isMake ? "Money earned!" : "");
+            const label =
+              tx.description || (isMake ? (isDebt ? "Payment made!" : "Money earned!") : "");
             const category = tx.categoryId ? categoryById.get(tx.categoryId) : null;
             return (
               <li

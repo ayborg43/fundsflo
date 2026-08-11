@@ -10,12 +10,14 @@ export default function AmountEntryModal({
   type,
   currency,
   categories,
+  isDebt,
   onClose,
   onConfirm,
 }: {
   type: TransactionType;
   currency: string;
   categories: Category[];
+  isDebt?: boolean;
   onClose: () => void;
   onConfirm: (
     amount: number,
@@ -64,7 +66,13 @@ export default function AmountEntryModal({
       >
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-display text-3xl sm:text-4xl text-navy">
-            {isMake ? "MAKE MONEY!" : "SPEND MONEY!"}
+            {isDebt
+              ? isMake
+                ? "PAY IT DOWN!"
+                : "ADD A CHARGE!"
+              : isMake
+                ? "MAKE MONEY!"
+                : "SPEND MONEY!"}
           </h2>
           <button
             data-testid="close-modal-btn"
@@ -77,7 +85,13 @@ export default function AmountEntryModal({
           </button>
         </div>
         <p className="font-display text-base text-navy/70 mb-4">
-          {isMake ? "How much did you earn?" : "How much did you spend?"}
+          {isDebt
+            ? isMake
+              ? "How much did you pay?"
+              : "How much did you charge?"
+            : isMake
+              ? "How much did you earn?"
+              : "How much did you spend?"}
         </p>
 
         <div

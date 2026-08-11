@@ -3,19 +3,25 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AccountSummary, AccountType } from "@/lib/types";
+import type { NetWorthPoint } from "@/lib/networth";
 import { formatMoney } from "@/lib/format";
 import AppHeader from "@/components/AppHeader";
 import AccountCard from "@/components/AccountCard";
 import AddAccountForm from "@/components/AddAccountForm";
+import NetWorthTrend from "@/components/NetWorthTrend";
 
 export default function HomeClient({ email, currency }: { email: string; currency: string }) {
   const router = useRouter();
   const [accounts, setAccounts] = useState<AccountSummary[] | null>(null);
+  const [netWorthHistory, setNetWorthHistory] = useState<NetWorthPoint[]>([]);
 
   useEffect(() => {
     fetch("/api/accounts")
       .then((res) => res.json())
       .then((data) => setAccounts(data.accounts));
+    fetch("/api/net-worth")
+      .then((res) => res.json())
+      .then((data) => setNetWorthHistory(data.history ?? []));
   }, []);
 
   async function handleAddAccount(name: string, type: AccountType, startingBalance: number | null) {
@@ -69,6 +75,8 @@ export default function HomeClient({ email, currency }: { email: string; currenc
           {formatMoney(totalNetWorth, currency)}
         </div>
       </div>
+
+      <NetWorthTrend history={netWorthHistory} />
 
       {accounts.length === 0 ? (
         <div

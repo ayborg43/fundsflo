@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { AccountDetail, Category, TransactionType } from "@/lib/types";
 import AppHeader from "@/components/AppHeader";
 import BalanceCard from "@/components/BalanceCard";
+import DebtMonster from "@/components/DebtMonster";
 import MoneyButtons from "@/components/MoneyButtons";
 import AmountEntryModal from "@/components/AmountEntryModal";
 import GoalTimeline from "@/components/GoalTimeline";
@@ -34,14 +35,23 @@ export default function AccountDetailClient({
       .then((data) => setCategories(data.categories ?? []));
   }, [accountId]);
 
+  function celebrate() {
+    setConfettiPieces(makeConfettiPieces());
+    setTimeout(() => setConfettiPieces([]), 2800);
+  }
+
   function celebrateIfGoalsReached(prevBalance: number, next: AccountDetail) {
     const newlyReached = next.goals.some(
       (g) => g.price > prevBalance && g.price <= next.balance
     );
-    if (newlyReached) {
-      setConfettiPieces(makeConfettiPieces());
-      setTimeout(() => setConfettiPieces([]), 2800);
-    }
+    if (newlyReached) celebrate();
+  }
+
+  function celebrateIfDebtPaidOff(prevBalance: number, next: AccountDetail) {
+    if (next.type !== "debt") return;
+    const wasOwed = -prevBalance > 0;
+    const nowOwed = -next.balance > 0;
+    if (wasOwed && !nowOwed) celebrate();
   }
 
   async function handleConfirmTransaction(
@@ -61,6 +71,7 @@ export default function AccountDetailClient({
     setAccount(data.account);
     setModalType(null);
     celebrateIfGoalsReached(prevBalance, data.account);
+    celebrateIfDebtPaidOff(prevBalance, data.account);
   }
 
   async function handleDeleteTransaction(id: string) {
@@ -113,19 +124,35 @@ export default function AccountDetailClient({
         onLogout={handleLogout}
       />
 
-      <BalanceCard balance={account.balance} currency={currency} />
-      <MoneyButtons onOpen={setModalType} />
-      <GoalTimeline
-        balance={account.balance}
-        goals={account.goals}
-        currency={currency}
-        onDelete={handleDeleteGoal}
-      />
-      <AddGoalForm onAdd={handleAddGoal} currency={currency} />
+      {account.type === "debt" ? (
+        <DebtMonster
+          balance={account.balance}
+          startingBalance={account.startingBalance ?? 0}
+          currency={currency}
+        />
+      ) : (
+        <BalanceCard balance={account.balance} currency={currency} />
+      )}
+
+      <MoneyButtons onOpen={setModalType} isDebt={account.type === "debt"} />
+
+      {account.type !== "debt" && (
+        <>
+          <GoalTimeline
+            balance={account.balance}
+            goals={account.goals}
+            currency={currency}
+            onDelete={handleDeleteGoal}
+          />
+          <AddGoalForm onAdd={handleAddGoal} currency={currency} />
+        </>
+      )}
+
       <TransactionFeed
         transactions={account.transactions}
         currency={currency}
         categories={categories}
+        isDebt={account.type === "debt"}
         onDelete={handleDeleteTransaction}
       />
 
@@ -134,6 +161,7 @@ export default function AccountDetailClient({
           type={modalType}
           currency={currency}
           categories={categories}
+          isDebt={account.type === "debt"}
           onClose={() => setModalType(null)}
           onConfirm={handleConfirmTransaction}
         />
