@@ -14,7 +14,7 @@ export async function register() {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       await migrate(db, { migrationsFolder: "./drizzle" });
-      console.log("[freeze-fund] database migrations applied");
+      console.log("[fundsflow] database migrations applied");
       return;
     } catch (err) {
       const isLastAttempt = attempt === MAX_ATTEMPTS;
@@ -25,13 +25,13 @@ export async function register() {
 
       if (isLastAttempt) {
         console.error(
-          `[freeze-fund] could not reach the database after ${MAX_ATTEMPTS} attempts, giving up: ${message}${hint}`
+          `[fundsflow] could not reach the database after ${MAX_ATTEMPTS} attempts, giving up: ${message}${hint}`
         );
         throw err;
       }
 
       console.warn(
-        `[freeze-fund] database not ready (attempt ${attempt}/${MAX_ATTEMPTS}): ${message}${hint} -- retrying in ${BASE_DELAY_MS * attempt}ms`
+        `[fundsflow] database not ready (attempt ${attempt}/${MAX_ATTEMPTS}): ${message}${hint} -- retrying in ${BASE_DELAY_MS * attempt}ms`
       );
       await sleep(BASE_DELAY_MS * attempt);
     }

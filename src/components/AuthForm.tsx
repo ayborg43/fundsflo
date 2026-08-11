@@ -65,7 +65,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     <div className="max-w-sm mx-auto px-4 sm:px-6 pt-10 sm:pt-16">
       <header className="flex justify-center mb-6">
         <h1 className="font-display text-4xl sm:text-5xl text-navy tracking-tight">
-          FREEZE FUND
+          FUNDSFLOW
         </h1>
       </header>
 

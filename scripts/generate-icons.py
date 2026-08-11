@@ -1,4 +1,4 @@
-"""Generate PWA icon assets for Freeze Fund.
+"""Generate PWA icon assets for FundsFlow.
 
 Draws a simple on-brand "coin" mark (navy square, cyan coin, navy $) at the
 sizes needed for the web app manifest, apple-touch-icon, and favicon.

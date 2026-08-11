@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Freeze Fund | Kid Money Tracker",
-    short_name: "Freeze Fund",
+    name: "FundsFlow | Kid Money Tracker",
+    short_name: "FundsFlow",
     description: "A fun, chunky money tracker for kids — track earnings, spending, and savings goals.",
     start_url: "/",
     display: "standalone",

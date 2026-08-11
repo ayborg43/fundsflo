@@ -81,11 +81,11 @@ export default function HomeClient({ email }: { email: string }) {
   }
 
   return (
-    <div data-testid="freeze-fund-app" className="max-w-2xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7">
+    <div data-testid="fundsflow-app" className="max-w-2xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7">
       <header className="flex items-center justify-between mb-6 gap-2">
         <div className="w-16 sm:w-24" />
         <h1 className="font-display text-4xl sm:text-5xl text-navy tracking-tight text-center">
-          FREEZE FUND
+          FUNDSFLOW
         </h1>
         <div className="w-16 sm:w-24 flex justify-end">
           <button

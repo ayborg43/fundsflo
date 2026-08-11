@@ -1,10 +1,10 @@
 services:
-  freeze-fund:
+  fundsflow:
     build: .
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgres://freezefund:freezefund@db:5432/freezefund
+      - DATABASE_URL=postgres://fundsflow:fundsflow@db:5432/fundsflow
       # Local/testing only — set a real random value for any shared deployment.
       - SESSION_SECRET=${SESSION_SECRET:-local-dev-secret-change-me}
     depends_on:
@@ -15,17 +15,17 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      - POSTGRES_USER=freezefund
-      - POSTGRES_PASSWORD=freezefund
-      - POSTGRES_DB=freezefund
+      - POSTGRES_USER=fundsflow
+      - POSTGRES_PASSWORD=fundsflow
+      - POSTGRES_DB=fundsflow
     volumes:
-      - freeze-fund-db:/var/lib/postgresql/data
+      - fundsflow-db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U freezefund"]
+      test: ["CMD-SHELL", "pg_isready -U fundsflow"]
       interval: 5s
       timeout: 5s
       retries: 10
     restart: unless-stopped
 
 volumes:
-  freeze-fund-db:
+  fundsflow-db:

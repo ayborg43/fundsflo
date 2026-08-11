@@ -16,13 +16,13 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Freeze Fund | Kid Money Tracker",
+  title: "FundsFlow | Kid Money Tracker",
   description: "A fun, chunky money tracker for kids — track earnings, spending, and savings goals.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Freeze Fund",
+    title: "FundsFlow",
   },
   icons: {
     icon: [

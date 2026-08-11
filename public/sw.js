@@ -1,4 +1,4 @@
-const CACHE_NAME = "freeze-fund-shell-v1";
+const CACHE_NAME = "fundsflow-shell-v1";
 const SHELL_URLS = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
