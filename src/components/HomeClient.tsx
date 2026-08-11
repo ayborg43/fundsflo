@@ -112,6 +112,7 @@ export default function HomeClient({ email, currency }: { email: string; currenc
             Log out
           </button>
         </div>
+        <div className="sm:hidden w-10" aria-hidden="true" />
       </header>
 
       <p className="font-display text-sm text-navy/60 text-center -mt-4 mb-4 truncate">
