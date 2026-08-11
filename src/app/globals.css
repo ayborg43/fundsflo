@@ -167,6 +167,15 @@ body::before {
   animation: fade-in 0.15s ease-out;
 }
 
+@keyframes drawer-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.drawer-slide-in {
+  animation: drawer-slide-in 0.2s ease-out;
+}
+
 @keyframes feed-item-in {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }

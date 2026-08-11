@@ -11,6 +11,7 @@ import GoalTimeline from "@/components/GoalTimeline";
 import AddGoalForm from "@/components/AddGoalForm";
 import TransactionFeed from "@/components/TransactionFeed";
 import Confetti, { makeConfettiPieces } from "@/components/Confetti";
+import MobileMenu from "@/components/MobileMenu";
 
 export default function HomeClient({ email, currency }: { email: string; currency: string }) {
   const router = useRouter();
@@ -87,14 +88,22 @@ export default function HomeClient({ email, currency }: { email: string; currenc
         <Link
           href="/settings"
           data-testid="settings-link"
-          className="font-display text-xs sm:text-sm text-navy/70 underline w-16 sm:w-24"
+          className="hidden sm:block font-display text-xs sm:text-sm text-navy/70 underline w-16 sm:w-24"
         >
           Settings
         </Link>
+        <div className="sm:hidden w-10">
+          <MobileMenu
+            items={[
+              { label: "Settings", href: "/settings" },
+              { label: "Log out", onClick: handleLogout },
+            ]}
+          />
+        </div>
         <h1 className="font-display text-4xl sm:text-5xl text-navy tracking-tight text-center">
           FUNDSFLOW
         </h1>
-        <div className="w-16 sm:w-24 flex justify-end">
+        <div className="hidden sm:flex w-16 sm:w-24 justify-end">
           <button
             data-testid="logout-btn"
             onClick={handleLogout}
