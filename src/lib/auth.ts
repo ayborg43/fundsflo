@@ -4,7 +4,8 @@ import { findUserById } from "./users";
 import type { User } from "./types";
 
 const COOKIE_NAME = "freeze_fund_session";
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
+const REMEMBERED_SECONDS = 60 * 60 * 24 * 30; // 30 days
+const NOT_REMEMBERED_SECONDS = 60 * 60 * 24; // 1 day
 
 function getSecret(): string {
   const secret = process.env.SESSION_SECRET;
@@ -47,8 +48,9 @@ function decodeSession(token: string): { uid: string; exp: number } | null {
   }
 }
 
-export async function createSession(userId: string): Promise<void> {
-  const expiresAt = Date.now() + MAX_AGE_SECONDS * 1000;
+export async function createSession(userId: string, rememberMe: boolean = true): Promise<void> {
+  const durationSeconds = rememberMe ? REMEMBERED_SECONDS : NOT_REMEMBERED_SECONDS;
+  const expiresAt = Date.now() + durationSeconds * 1000;
   const token = encodeSession(userId, expiresAt);
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
@@ -56,7 +58,10 @@ export async function createSession(userId: string): Promise<void> {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: MAX_AGE_SECONDS,
+    // Omit maxAge when not remembered so it's a browser session cookie
+    // (cleared on browser close); the signed exp inside the token still
+    // caps it at NOT_REMEMBERED_SECONDS server-side as a fallback.
+    ...(rememberMe ? { maxAge: durationSeconds } : {}),
   });
 }
 

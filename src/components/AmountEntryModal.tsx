@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { TransactionType } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 
-const TAGS = ["cash", "venmo"] as const;
+const TAGS = ["cash", "bank"] as const;
 
 export default function AmountEntryModal({
   type,
