@@ -37,20 +37,31 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Deploy on Dokploy
 
-This repo ships with a production `Dockerfile` (multi-stage, `output: "standalone"`) plus a `docker-compose.yml` for local testing. To deploy on [Dokploy](https://dokploy.com):
+This repo ships with a production `Dockerfile` (multi-stage, `output: "standalone"`) plus a `docker-compose.yml` for local testing (app + Postgres). Data is stored in PostgreSQL — schema migrations (in `drizzle/`) run automatically on server boot via `src/instrumentation.ts`, so there's no manual migration step.
 
-1. Create a new application in Dokploy and point it at this repo/branch.
-2. Set the build type to **Dockerfile** (the `Dockerfile` at the repo root is picked up automatically).
-3. Under **Advanced → Mounts**, add a volume mounted at `/app/data` — this is where user accounts (`data/users.json`) and each user's balance/transactions/goals (`data/accounts/<id>.json`) are persisted. Without this, everything is lost on every redeploy.
-4. Under **Environment**, set `SESSION_SECRET` to a random string (e.g. `openssl rand -base64 32`) — the app throws on any request in production if this is missing, by design, so it can't silently sign sessions with a guessable dev secret.
+1. **Provision the database first.** In Dokploy, create a **Database → PostgreSQL** resource (separate from the app). Dokploy manages its volume/backups for you. Copy the internal connection string it gives you (something like `postgres://user:pass@service-name:5432/dbname`).
+2. Create a new application in Dokploy and point it at this repo/branch.
+3. Set the build type to **Dockerfile** (the `Dockerfile` at the repo root is picked up automatically).
+4. Under **Environment**, set:
+   - `DATABASE_URL` — the connection string from step 1.
+   - `SESSION_SECRET` — a random string (e.g. `openssl rand -base64 32`). The app throws on any request in production if this is missing, by design, so it can't silently sign sessions with a guessable dev secret.
 5. Set the container port to `3000` (matches `EXPOSE 3000` / `PORT=3000` in the Dockerfile) and let Dokploy's Traefik proxy handle the domain/HTTPS.
-6. Optional env vars (see `.env.example`): `DATA_DIR` (defaults to `/app/data`) if you want the data files somewhere else in the container.
-7. Deploy. Dokploy will build the image and run `node server.js`.
+6. Deploy. Dokploy will build the image, boot `node server.js`, which applies any pending migrations before serving the first request.
 
 A `/api/health` endpoint is included for Dokploy's health check configuration.
 
-To test the exact same image locally before pushing:
+To test the exact same image locally before pushing (spins up Postgres too):
 
 ```bash
 docker compose up --build
 ```
+
+### Changing the schema
+
+Edit `src/lib/db/schema.ts`, then generate a migration:
+
+```bash
+npx drizzle-kit generate
+```
+
+Commit the generated file(s) in `drizzle/` — they apply automatically on the next deploy.

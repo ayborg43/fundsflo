@@ -4,12 +4,28 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATA_DIR=/app/data
+      - DATABASE_URL=postgres://freezefund:freezefund@db:5432/freezefund
       # Local/testing only — set a real random value for any shared deployment.
       - SESSION_SECRET=${SESSION_SECRET:-local-dev-secret-change-me}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=freezefund
+      - POSTGRES_PASSWORD=freezefund
+      - POSTGRES_DB=freezefund
     volumes:
-      - freeze-fund-data:/app/data
+      - freeze-fund-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U freezefund"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
 volumes:
-  freeze-fund-data:
+  freeze-fund-db:
