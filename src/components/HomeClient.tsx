@@ -9,6 +9,7 @@ import AppHeader from "@/components/AppHeader";
 import AccountCard from "@/components/AccountCard";
 import AddAccountForm from "@/components/AddAccountForm";
 import NetWorthTrend from "@/components/NetWorthTrend";
+import AIInsightsCard from "@/components/AIInsightsCard";
 
 export default function HomeClient({ email, currency }: { email: string; currency: string }) {
   const router = useRouter();
@@ -77,6 +78,8 @@ export default function HomeClient({ email, currency }: { email: string; currenc
       </div>
 
       <NetWorthTrend history={netWorthHistory} />
+
+      <AIInsightsCard />
 
       {accounts.length === 0 ? (
         <div

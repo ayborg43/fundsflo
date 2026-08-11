@@ -47,6 +47,7 @@ This repo ships with a production `Dockerfile` (multi-stage, `output: "standalon
 4. Under **Environment**, set:
    - `DATABASE_URL` — the connection string from step 1.
    - `SESSION_SECRET` — a random string (e.g. `openssl rand -base64 32`). The app throws on any request in production if this is missing, by design, so it can't silently sign sessions with a guessable dev secret.
+   - `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL` — for the Money Buddy chat/recap/forecast feature. Generic OpenAI-compatible chat-completions config (see `.env.example`); the app has no provider-specific code, so pointing these at a different provider later is a config change, not a code change. Without `AI_API_KEY` set, the chat/recap/forecast endpoints return a clear error rather than crashing the app (they're not called from `instrumentation.ts`, so a missing key only affects those three routes, not startup).
 5. Set the container port to `3000` (matches `EXPOSE 3000` / `PORT=3000` in the Dockerfile) and let Dokploy's Traefik proxy handle the domain/HTTPS.
 6. Deploy. Dokploy will build the image, boot `node server.js`, which applies any pending migrations before serving the first request.
 
