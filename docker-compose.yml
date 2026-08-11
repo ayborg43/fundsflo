@@ -1,0 +1,13 @@
+services:
+  freeze-fund:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATA_DIR=/app/data
+    volumes:
+      - freeze-fund-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  freeze-fund-data:

@@ -1,26 +1,177 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --gus-navy: #2a2d7c;
+  --gus-orange: #ff5a36;
+  --gus-yellow: #ffc400;
+  --gus-cyan: #29c7e8;
+  --gus-lime: #7ce645;
+  --gus-pink: #ff4d9d;
+  --gus-cream: #fff7e8;
+
+  --background: var(--gus-cream);
+  --foreground: var(--gus-navy);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-navy: var(--gus-navy);
+  --color-orange: var(--gus-orange);
+  --color-yellow: var(--gus-yellow);
+  --color-cyan: var(--gus-cyan);
+  --color-lime: var(--gus-lime);
+  --color-pink: var(--gus-pink);
+  --color-cream: var(--gus-cream);
+  --font-display: var(--font-fredoka);
+  --font-sans: var(--font-nunito);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--gus-cream);
+  background-image: radial-gradient(var(--gus-navy) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-attachment: fixed;
+  opacity: 1;
+  color: var(--gus-navy);
+  font-family: var(--font-nunito), system-ui, sans-serif;
+  font-weight: 700;
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 247, 232, 0.82);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.font-display {
+  font-family: var(--font-fredoka), system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.text-navy {
+  color: var(--gus-navy);
+}
+
+.chunky-card {
+  background: #fff;
+  border: 4px solid var(--gus-navy);
+  border-radius: 28px;
+  box-shadow: 0 6px 0 0 var(--gus-navy);
+}
+
+.chunky-btn {
+  border: 4px solid var(--gus-navy);
+  border-radius: 28px;
+  box-shadow: 0 6px 0 0 var(--gus-navy);
+  font-family: var(--font-fredoka), system-ui, sans-serif;
+  font-weight: 700;
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease;
+  user-select: none;
+}
+
+@media (hover: hover) {
+  .chunky-btn:hover {
+    box-shadow: 0 9px 0 0 var(--gus-navy);
+    transform: translateY(-3px) rotate(-0.5deg);
+  }
+}
+
+.chunky-btn:active {
+  box-shadow: 0 2px 0 0 var(--gus-navy);
+  transform: translateY(4px);
+}
+
+.chunky-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.numpad-key {
+  background: #fff;
+  border: 3px solid var(--gus-navy);
+  border-radius: 20px;
+  box-shadow: 0 4px 0 0 var(--gus-navy);
+  color: var(--gus-navy);
+  font-family: var(--font-fredoka), system-ui, sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  height: 64px;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+  user-select: none;
+}
+
+.numpad-key:active {
+  box-shadow: 0 1px 0 0 var(--gus-navy);
+  transform: translateY(3px);
+}
+
+@keyframes wobble {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+.goal-wobble {
+  animation: wobble 2.6s ease-in-out infinite;
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translate(var(--x), -20vh) rotate(0deg);
+  }
+  100% {
+    opacity: 0.9;
+    transform: translate(calc(var(--x) + var(--dx)), 110vh) rotate(2turn);
+  }
+}
+
+.confetti-piece {
+  animation: confetti-fall var(--dur) cubic-bezier(0.2, 0.7, 0.4, 1) forwards;
+  border-radius: 4px;
+  height: 18px;
+  width: 14px;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  z-index: 9999;
+}
+
+@keyframes modal-slide-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-slide-up {
+  animation: modal-slide-up 0.18s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fade-in 0.15s ease-out;
+}
+
+@keyframes feed-item-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.feed-item {
+  animation: feed-item-in 0.2s ease-out;
 }
