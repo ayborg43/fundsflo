@@ -5,6 +5,8 @@ services:
       - "3000:3000"
     environment:
       - DATA_DIR=/app/data
+      # Local/testing only — set a real random value for any shared deployment.
+      - SESSION_SECRET=${SESSION_SECRET:-local-dev-secret-change-me}
     volumes:
       - freeze-fund-data:/app/data
     restart: unless-stopped

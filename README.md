@@ -41,10 +41,11 @@ This repo ships with a production `Dockerfile` (multi-stage, `output: "standalon
 
 1. Create a new application in Dokploy and point it at this repo/branch.
 2. Set the build type to **Dockerfile** (the `Dockerfile` at the repo root is picked up automatically).
-3. Under **Advanced → Mounts**, add a volume mounted at `/app/data` — this is where `data/account.json` (balances, transactions, goals) is persisted. Without this, data is lost on every redeploy.
-4. Set the container port to `3000` (matches `EXPOSE 3000` / `PORT=3000` in the Dockerfile) and let Dokploy's Traefik proxy handle the domain/HTTPS.
-5. Optional env vars (see `.env.example`): `DATA_DIR` (defaults to `/app/data`) if you want the data file somewhere else in the container.
-6. Deploy. Dokploy will build the image and run `node server.js`.
+3. Under **Advanced → Mounts**, add a volume mounted at `/app/data` — this is where user accounts (`data/users.json`) and each user's balance/transactions/goals (`data/accounts/<id>.json`) are persisted. Without this, everything is lost on every redeploy.
+4. Under **Environment**, set `SESSION_SECRET` to a random string (e.g. `openssl rand -base64 32`) — the app throws on any request in production if this is missing, by design, so it can't silently sign sessions with a guessable dev secret.
+5. Set the container port to `3000` (matches `EXPOSE 3000` / `PORT=3000` in the Dockerfile) and let Dokploy's Traefik proxy handle the domain/HTTPS.
+6. Optional env vars (see `.env.example`): `DATA_DIR` (defaults to `/app/data`) if you want the data files somewhere else in the container.
+7. Deploy. Dokploy will build the image and run `node server.js`.
 
 A `/api/health` endpoint is included for Dokploy's health check configuration.
 

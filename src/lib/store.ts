@@ -4,18 +4,22 @@ import { randomUUID } from "crypto";
 import type { Account, Goal, Transaction, TransactionType } from "./types";
 
 const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
-const DATA_FILE = path.join(DATA_DIR, "account.json");
+const ACCOUNTS_DIR = path.join(DATA_DIR, "accounts");
 
 function emptyAccount(): Account {
   return { balance: 0, transactions: [], goals: [] };
 }
 
-async function ensureFile(): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+function accountFile(userId: string): string {
+  return path.join(ACCOUNTS_DIR, `${userId}.json`);
+}
+
+async function ensureFile(userId: string): Promise<void> {
+  await fs.mkdir(ACCOUNTS_DIR, { recursive: true });
   try {
-    await fs.access(DATA_FILE);
+    await fs.access(accountFile(userId));
   } catch {
-    await fs.writeFile(DATA_FILE, JSON.stringify(emptyAccount(), null, 2));
+    await fs.writeFile(accountFile(userId), JSON.stringify(emptyAccount(), null, 2));
   }
 }
 
@@ -26,9 +30,9 @@ function recomputeBalance(transactions: Transaction[]): number {
   );
 }
 
-async function readAccount(): Promise<Account> {
-  await ensureFile();
-  const raw = await fs.readFile(DATA_FILE, "utf-8");
+async function readAccount(userId: string): Promise<Account> {
+  await ensureFile(userId);
+  const raw = await fs.readFile(accountFile(userId), "utf-8");
   const parsed = JSON.parse(raw) as Account;
   return {
     balance: recomputeBalance(parsed.transactions ?? []),
@@ -37,21 +41,24 @@ async function readAccount(): Promise<Account> {
   };
 }
 
-async function writeAccount(account: Account): Promise<void> {
-  await fs.writeFile(DATA_FILE, JSON.stringify(account, null, 2));
+async function writeAccount(userId: string, account: Account): Promise<void> {
+  await fs.writeFile(accountFile(userId), JSON.stringify(account, null, 2));
 }
 
-export async function getAccount(): Promise<Account> {
-  return readAccount();
+export async function getAccount(userId: string): Promise<Account> {
+  return readAccount(userId);
 }
 
-export async function addTransaction(input: {
-  type: TransactionType;
-  amount: number;
-  description: string;
-  tag: string | null;
-}): Promise<Account> {
-  const account = await readAccount();
+export async function addTransaction(
+  userId: string,
+  input: {
+    type: TransactionType;
+    amount: number;
+    description: string;
+    tag: string | null;
+  }
+): Promise<Account> {
+  const account = await readAccount(userId);
   const tx: Transaction = {
     id: randomUUID(),
     type: input.type,
@@ -62,20 +69,23 @@ export async function addTransaction(input: {
   };
   account.transactions.unshift(tx);
   account.balance = recomputeBalance(account.transactions);
-  await writeAccount(account);
+  await writeAccount(userId, account);
   return account;
 }
 
-export async function deleteTransaction(id: string): Promise<Account> {
-  const account = await readAccount();
+export async function deleteTransaction(userId: string, id: string): Promise<Account> {
+  const account = await readAccount(userId);
   account.transactions = account.transactions.filter((tx) => tx.id !== id);
   account.balance = recomputeBalance(account.transactions);
-  await writeAccount(account);
+  await writeAccount(userId, account);
   return account;
 }
 
-export async function addGoal(input: { name: string; price: number }): Promise<Account> {
-  const account = await readAccount();
+export async function addGoal(
+  userId: string,
+  input: { name: string; price: number }
+): Promise<Account> {
+  const account = await readAccount(userId);
   const goal: Goal = {
     id: randomUUID(),
     name: input.name,
@@ -83,13 +93,13 @@ export async function addGoal(input: { name: string; price: number }): Promise<A
     createdAt: new Date().toISOString(),
   };
   account.goals.push(goal);
-  await writeAccount(account);
+  await writeAccount(userId, account);
   return account;
 }
 
-export async function deleteGoal(id: string): Promise<Account> {
-  const account = await readAccount();
+export async function deleteGoal(userId: string, id: string): Promise<Account> {
+  const account = await readAccount(userId);
   account.goals = account.goals.filter((goal) => goal.id !== id);
-  await writeAccount(account);
+  await writeAccount(userId, account);
   return account;
 }

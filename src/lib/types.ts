@@ -21,3 +21,10 @@ export type Account = {
   transactions: Transaction[];
   goals: Goal[];
 };
+
+export type User = {
+  id: string;
+  email: string;
+  passwordHash: string;
+  createdAt: string;
+};
