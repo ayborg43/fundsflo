@@ -17,12 +17,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  let user;
   try {
-    const user = await createUser(email, password);
-    await createSession(user.id);
-    return NextResponse.json({ email: user.email });
+    user = await createUser(email, password);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not create account";
     return NextResponse.json({ error: message }, { status: 409 });
   }
+
+  await createSession(user.id);
+  return NextResponse.json({ email: user.email });
 }
