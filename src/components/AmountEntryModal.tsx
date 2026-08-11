@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { TransactionType } from "@/lib/types";
+import type { Category, TransactionType } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 
 const TAGS = ["cash", "bank"] as const;
@@ -9,17 +9,25 @@ const TAGS = ["cash", "bank"] as const;
 export default function AmountEntryModal({
   type,
   currency,
+  categories,
   onClose,
   onConfirm,
 }: {
   type: TransactionType;
   currency: string;
+  categories: Category[];
   onClose: () => void;
-  onConfirm: (amount: number, description: string, tag: string | null) => void;
+  onConfirm: (
+    amount: number,
+    description: string,
+    tag: string | null,
+    categoryId: string | null
+  ) => void;
 }) {
   const [digits, setDigits] = useState("");
   const [description, setDescription] = useState("");
   const [tag, setTag] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
 
   const amount = digits ? parseFloat(digits) || 0 : 0;
   const isMake = type === "make";
@@ -39,7 +47,7 @@ export default function AmountEntryModal({
 
   function submit() {
     if (amount <= 0) return;
-    onConfirm(amount, description.trim(), tag);
+    onConfirm(amount, description.trim(), tag, categoryId);
   }
 
   return (
@@ -119,6 +127,31 @@ export default function AmountEntryModal({
               className="w-full font-display text-lg text-navy rounded-2xl border-4 border-navy px-4 py-3 outline-none bg-white"
               style={{ boxShadow: "var(--gus-navy) 0px 4px 0px 0px" }}
             />
+          </div>
+        )}
+
+        {categories.length > 0 && (
+          <div className="mb-4">
+            <label className="font-display text-base text-navy block mb-2">
+              Category (optional)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  data-testid={`category-chip-${c.id}`}
+                  onClick={() => setCategoryId((prev) => (prev === c.id ? null : c.id))}
+                  className="chunky-btn px-3 py-2 text-sm"
+                  style={{
+                    backgroundColor: categoryId === c.id ? "var(--gus-yellow)" : "white",
+                    opacity: categoryId === c.id ? 1 : 0.85,
+                  }}
+                >
+                  {c.emoji} {c.name}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

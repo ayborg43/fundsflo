@@ -1,15 +1,18 @@
-import type { Transaction } from "@/lib/types";
+import type { Category, Transaction } from "@/lib/types";
 import { formatMoney, formatRelativeTime } from "@/lib/format";
 
 export default function TransactionFeed({
   transactions,
   currency,
+  categories,
   onDelete,
 }: {
   transactions: Transaction[];
   currency: string;
+  categories: Category[];
   onDelete: (id: string) => void;
 }) {
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
   return (
     <div
       data-testid="transaction-feed"
@@ -26,6 +29,7 @@ export default function TransactionFeed({
           {transactions.map((tx) => {
             const isMake = tx.type === "make";
             const label = tx.description || (isMake ? "Money earned!" : "");
+            const category = tx.categoryId ? categoryById.get(tx.categoryId) : null;
             return (
               <li
                 key={tx.id}
@@ -53,6 +57,13 @@ export default function TransactionFeed({
                         style={{ backgroundColor: "var(--gus-navy)" }}
                       >
                         {tx.tag}
+                      </span>
+                    )}
+                    {category && (
+                      <span
+                        className="font-display text-[10px] text-navy px-2 py-0.5 rounded-full border-2 border-navy"
+                      >
+                        {category.emoji} {category.name}
                       </span>
                     )}
                   </div>

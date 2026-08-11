@@ -8,11 +8,47 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const accountTypes = [
+  "cash",
+  "checking",
+  "savings",
+  "credit",
+  "debt",
+  "investment",
+] as const;
+
+export const accounts = pgTable("accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  type: text("type", { enum: accountTypes }).notNull(),
+  // Only meaningful for debt-type accounts: the original amount owed, used
+  // to compute payoff progress. Null for asset-type accounts.
+  startingBalance: numeric("starting_balance", { mode: "number" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const categories = pgTable("categories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  emoji: text("emoji").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const transactions = pgTable("transactions", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
   type: text("type", { enum: ["make", "spend"] }).notNull(),
   amount: numeric("amount", { mode: "number" }).notNull(),
   description: text("description").notNull().default(""),
@@ -25,6 +61,9 @@ export const goals = pgTable("goals", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id")
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   price: numeric("price", { mode: "number" }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
