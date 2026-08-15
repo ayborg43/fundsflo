@@ -18,7 +18,7 @@ export default function MobileMenu({ items }: { items: MenuItem[] }) {
         data-testid="mobile-menu-btn"
         aria-label="Open menu"
         onClick={() => setOpen(true)}
-        className="w-10 h-10 rounded-full border-3 border-navy flex items-center justify-center bg-white sm:hidden"
+        className="w-10 h-10 rounded-full border-3 border-navy flex items-center justify-center bg-white"
         style={{ borderWidth: 3, boxShadow: "var(--gus-navy) 0px 3px 0px 0px" }}
       >
         <span className="font-display text-xl text-navy leading-none">☰</span>
@@ -27,7 +27,7 @@ export default function MobileMenu({ items }: { items: MenuItem[] }) {
       {open && (
         <div
           data-testid="mobile-menu-overlay"
-          className="fixed inset-0 z-50 flex justify-end fade-in sm:hidden"
+          className="fixed inset-0 z-50 flex justify-end fade-in"
           style={{ backgroundColor: "rgba(42, 45, 124, 0.45)" }}
           onClick={() => setOpen(false)}
         >
