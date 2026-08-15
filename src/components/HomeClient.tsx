@@ -3,26 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AccountSummary, AccountType } from "@/lib/types";
-import type { NetWorthPoint } from "@/lib/networth";
 import { formatMoney } from "@/lib/format";
 import AppHeader from "@/components/AppHeader";
 import AccountCard from "@/components/AccountCard";
 import AddAccountForm from "@/components/AddAccountForm";
-import NetWorthTrend from "@/components/NetWorthTrend";
-import AIInsightsCard from "@/components/AIInsightsCard";
 
 export default function HomeClient({ email, currency }: { email: string; currency: string }) {
   const router = useRouter();
   const [accounts, setAccounts] = useState<AccountSummary[] | null>(null);
-  const [netWorthHistory, setNetWorthHistory] = useState<NetWorthPoint[]>([]);
 
   useEffect(() => {
     fetch("/api/accounts")
       .then((res) => res.json())
       .then((data) => setAccounts(data.accounts));
-    fetch("/api/net-worth")
-      .then((res) => res.json())
-      .then((data) => setNetWorthHistory(data.history ?? []));
   }, []);
 
   async function handleAddAccount(name: string, type: AccountType, startingBalance: number | null) {
@@ -67,19 +60,12 @@ export default function HomeClient({ email, currency }: { email: string; currenc
       </p>
 
       <div
-        data-testid="net-worth-card"
-        className="chunky-card p-5 sm:p-6 text-center mb-5"
-        style={{ backgroundColor: "var(--gus-cyan)" }}
+        data-testid="net-worth-line"
+        className="flex items-center justify-between font-display text-navy mb-4 px-1"
       >
-        <div className="font-display text-sm text-navy/80 uppercase tracking-wide">Net worth</div>
-        <div className="font-display text-4xl sm:text-5xl text-navy">
-          {formatMoney(totalNetWorth, currency)}
-        </div>
+        <span className="text-sm text-navy/60 uppercase tracking-wide">Net worth</span>
+        <span className="text-2xl">{formatMoney(totalNetWorth, currency)}</span>
       </div>
-
-      <NetWorthTrend history={netWorthHistory} />
-
-      <AIInsightsCard />
 
       {accounts.length === 0 ? (
         <div

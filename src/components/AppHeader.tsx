@@ -17,6 +17,8 @@ export default function AppHeader({
   const menuItems: MenuItem[] = [
     ...(backHref ? [{ label: backLabel ?? "Back", href: backHref }] : []),
     { label: "Money Buddy Chat", href: "/chat" },
+    { label: "Insights", href: "/insights" },
+    { label: "Statements", href: "/statements" },
     { label: "Budgets", href: "/budgets" },
     { label: "Bills", href: "/bills" },
     { label: "Settings", href: "/settings" },

@@ -104,3 +104,17 @@ export const recurringBills = pgTable("recurring_bills", {
   lastPaidAt: timestamp("last_paid_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Uploaded bank/card statements (CSV or Excel). Analysis-only: this never
+// creates transactions -- rawContent is handed to the AI for commentary,
+// nothing here touches the accounts/transactions ledger.
+export const statements = pgTable("statements", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  filename: text("filename").notNull(),
+  rawContent: text("raw_content").notNull(),
+  analysis: text("analysis"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
