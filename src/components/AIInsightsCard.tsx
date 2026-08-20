@@ -35,7 +35,7 @@ export default function AIInsightsCard() {
       <h2 className="font-display text-2xl text-white mb-3">MONEY BUDDY</h2>
       <div className="flex flex-wrap gap-2 mb-3">
         <Link
-          href="/chat"
+          href="/"
           data-testid="open-chat-link"
           className="chunky-btn px-4 py-2 text-sm text-navy"
           style={{ backgroundColor: "white" }}

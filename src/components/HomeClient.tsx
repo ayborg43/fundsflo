@@ -53,7 +53,7 @@ export default function HomeClient({ email, currency }: { email: string; currenc
 
   return (
     <div data-testid="fundsflow-app" className="max-w-2xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7">
-      <AppHeader title="FUNDSFLOW" onLogout={handleLogout} />
+      <AppHeader title="ACCOUNTS" onLogout={handleLogout} />
 
       <p className="font-display text-sm text-navy/60 text-center -mt-4 mb-4 truncate">
         {email}

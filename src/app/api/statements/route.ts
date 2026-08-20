@@ -3,6 +3,8 @@ import * as XLSX from "xlsx";
 import { getSessionUserId } from "@/lib/auth";
 import { listStatements, createStatement, setStatementAnalysis, deleteStatement } from "@/lib/statements";
 import { getChatCompletion } from "@/lib/ai/client";
+import { saveMessage } from "@/lib/ai/messages";
+import { friendlyAIError } from "@/lib/ai/errors";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_CONTENT_CHARS_FOR_AI = 20000;
@@ -25,6 +27,10 @@ export async function POST(request: NextRequest) {
 
   const formData = await request.formData().catch(() => null);
   const file = formData?.get("file");
+  // Uploads that came from the chat get the analysis mirrored into chat
+  // history, so it reads back as a normal exchange. The Statements screen
+  // omits this and behaves exactly as before.
+  const fromChat = formData?.get("fromChat") === "1";
   if (!file || !(file instanceof File)) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
@@ -79,9 +85,17 @@ export async function POST(request: NextRequest) {
       { role: "user", content: `Statement filename: ${file.name}\n\n${contentForAI}` },
     ]);
     await setStatementAnalysis(id, analysis);
-    return NextResponse.json({ statement: { id, filename: file.name, analysis, createdAt } });
+    const chatLabel = `📄 Uploaded ${file.name}`;
+    if (fromChat && analysis.trim()) {
+      await saveMessage(userId, "user", chatLabel);
+      await saveMessage(userId, "assistant", analysis.trim());
+    }
+    return NextResponse.json({
+      statement: { id, filename: file.name, analysis, createdAt },
+      chatLabel: fromChat ? chatLabel : null,
+    });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "AI analysis failed";
+    const message = friendlyAIError(err, "statement analysis");
     // The statement is still saved even if analysis fails, so the upload
     // isn't lost -- delete and re-upload to retry once AI is configured.
     return NextResponse.json({

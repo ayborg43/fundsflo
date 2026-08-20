@@ -22,19 +22,32 @@ export async function addTransaction(
     description: string;
     tag: string | null;
     categoryId: string | null;
+    // Omit for "right now". Set to backdate an entry the user is logging
+    // after the fact.
+    timestamp?: Date;
   }
-): Promise<AccountDetail> {
+): Promise<{ detail: AccountDetail; transactionId: string }> {
   await assertOwnsAccount(userId, accountId);
-  await db.insert(transactions).values({
-    userId,
-    accountId,
-    categoryId: input.categoryId,
-    type: input.type,
-    amount: input.amount,
-    description: input.description,
-    tag: input.tag,
-  });
-  return (await getAccountDetail(userId, accountId))!;
+  const [created] = await db
+    .insert(transactions)
+    .values({
+      userId,
+      accountId,
+      categoryId: input.categoryId,
+      type: input.type,
+      amount: input.amount,
+      description: input.description,
+      tag: input.tag,
+      // Leaving the column out entirely lets the schema default (now()) apply;
+      // passing undefined explicitly would not.
+      ...(input.timestamp ? { timestamp: input.timestamp } : {}),
+    })
+    .returning({ id: transactions.id });
+
+  return {
+    detail: (await getAccountDetail(userId, accountId))!,
+    transactionId: created.id,
+  };
 }
 
 export async function deleteTransaction(

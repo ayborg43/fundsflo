@@ -120,7 +120,7 @@ export default function AccountDetailClient({
     >
       <AppHeader
         title={account.name}
-        backHref="/"
+        backHref="/accounts"
         backLabel="← Accounts"
         onLogout={handleLogout}
       />

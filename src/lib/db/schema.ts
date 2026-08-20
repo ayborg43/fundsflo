@@ -5,6 +5,11 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   currency: text("currency").notNull().default("USD"),
+  // Where a chat-logged transaction lands when the user doesn't name an
+  // account. Deliberately carries no foreign key: users -> accounts -> users
+  // would be a cycle, and every read has to re-check the account still exists
+  // and still belongs to this user anyway, so a dangling id costs nothing.
+  defaultAccountId: uuid("default_account_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

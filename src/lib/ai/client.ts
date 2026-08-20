@@ -5,6 +5,18 @@
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
+// Carries the upstream HTTP status so callers can tell "the provider is busy"
+// from "the request was wrong" without string-matching the message.
+export class AIRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message);
+    this.name = "AIRequestError";
+  }
+}
+
 function getConfig() {
   const baseUrl = process.env.AI_BASE_URL;
   const apiKey = process.env.AI_API_KEY;
@@ -27,7 +39,7 @@ async function requestCompletion(messages: ChatMessage[], stream: boolean) {
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`AI request failed (${res.status}): ${text.slice(0, 500)}`);
+    throw new AIRequestError(`AI request failed (${res.status}): ${text.slice(0, 500)}`, res.status);
   }
   return res;
 }

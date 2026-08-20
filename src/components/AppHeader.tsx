@@ -1,5 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+
 import MobileMenu, { type MenuItem } from "@/components/MobileMenu";
 
 export default function AppHeader({
@@ -13,9 +15,12 @@ export default function AppHeader({
   backLabel?: string;
   onLogout: () => void;
 }) {
-  const menuItems: MenuItem[] = [
+  const pathname = usePathname();
+
+  const allItems: MenuItem[] = [
     ...(backHref ? [{ label: backLabel ?? "Back", href: backHref }] : []),
-    { label: "Money Buddy Chat", href: "/chat" },
+    { label: "Money Buddy Chat", href: "/" },
+    { label: "Accounts", href: "/accounts" },
     { label: "Insights", href: "/insights" },
     { label: "Statements", href: "/statements" },
     { label: "Budgets", href: "/budgets" },
@@ -24,6 +29,10 @@ export default function AppHeader({
     { label: "Categories", href: "/categories" },
     { label: "Log out", onClick: onLogout },
   ];
+
+  // Drop the link to wherever we already are -- every screen now reaches every
+  // other one through this one menu, so self-links are just noise.
+  const menuItems = allItems.filter((item) => item.href !== pathname);
 
   return (
     <header className="flex items-center justify-between mb-6 gap-2">

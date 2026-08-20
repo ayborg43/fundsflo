@@ -50,7 +50,31 @@ export type User = {
   email: string;
   passwordHash: string;
   currency: string;
+  defaultAccountId: string | null;
   createdAt: string;
+};
+
+// A transaction the AI parsed out of a chat message but has NOT written yet.
+// The user confirms (and can correct) it in the chat before it becomes a row
+// in `transactions`, so accountId is nullable: when the message names no
+// account and there's no sensible default, the user picks one on the card.
+// A category the AI understood the user to be asking for, likewise unwritten
+// until confirmed.
+export type CategoryDraft = {
+  name: string;
+  emoji: string;
+};
+
+export type TransactionDraft = {
+  type: TransactionType;
+  amount: number;
+  description: string;
+  accountId: string | null;
+  categoryId: string | null;
+  // Calendar day the money moved, as YYYY-MM-DD. Null means "now" -- which is
+  // not the same as today's date: logging something that happened today should
+  // keep its real clock time so the feed reads "just now", not "0d ago".
+  date: string | null;
 };
 
 export type Budget = {

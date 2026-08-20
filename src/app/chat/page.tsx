@@ -1,10 +1,7 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
-import ChatView from "@/components/ChatView";
 
-export default async function ChatPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-
-  return <ChatView />;
+// Chat is the home screen now. Kept so existing bookmarks (and any installed
+// PWA shortcut) don't 404.
+export default function ChatPage() {
+  redirect("/");
 }

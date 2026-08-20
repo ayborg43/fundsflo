@@ -1,23 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CURRENCIES } from "@/lib/currency";
+import type { AccountSummary } from "@/lib/types";
 
 export default function SettingsForm({
   email,
   currency,
+  defaultAccountId,
 }: {
   email: string;
   currency: string;
+  defaultAccountId: string | null;
 }) {
   const [selected, setSelected] = useState(currency);
+  const [accounts, setAccounts] = useState<AccountSummary[]>([]);
+  const [defaultAccount, setDefaultAccount] = useState(defaultAccountId);
+  const [accountError, setAccountError] = useState<string | null>(null);
+
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/accounts")
+      .then((res) => res.json())
+      .then((data) => setAccounts(data.accounts ?? []));
+  }, []);
+
+  async function saveDefaultAccount(next: string | null) {
+    const previous = defaultAccount;
+    setDefaultAccount(next);
+    setAccountError(null);
+    const res = await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ defaultAccountId: next }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setAccountError(data?.error ?? "Could not save");
+      setDefaultAccount(previous);
+    }
+  }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -113,6 +142,41 @@ export default function SettingsForm({
         {error && (
           <p className="font-display text-sm text-white bg-orange mt-4 text-center rounded-2xl py-2" style={{ backgroundColor: "var(--gus-orange)" }}>
             {error}
+          </p>
+        )}
+
+        <h2 className="font-display text-xl text-navy mb-1 mt-6">Default account</h2>
+        <p className="font-display text-sm text-navy/60 mb-3">
+          Where Money Buddy puts money you log in the chat without naming an account.
+        </p>
+        {accounts.length === 0 ? (
+          <p className="font-display text-sm text-navy/60">
+            No accounts yet — add one from Accounts in the menu first.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {accounts.map((a) => (
+              <button
+                key={a.id}
+                data-testid={`default-account-${a.id}`}
+                onClick={() => saveDefaultAccount(defaultAccount === a.id ? null : a.id)}
+                className="chunky-btn py-3 px-4 text-left flex items-center justify-between text-lg"
+                style={{
+                  backgroundColor: defaultAccount === a.id ? "var(--gus-lime)" : "white",
+                }}
+              >
+                <span className="truncate">{a.name}</span>
+                {defaultAccount === a.id && <span>✓</span>}
+              </button>
+            ))}
+          </div>
+        )}
+        {accountError && (
+          <p
+            className="font-display text-sm text-white mt-2 text-center rounded-2xl py-2"
+            style={{ backgroundColor: "var(--gus-orange)" }}
+          >
+            {accountError}
           </p>
         )}
 

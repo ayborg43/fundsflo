@@ -20,7 +20,7 @@ export async function POST(
   }
 
   try {
-    const account = await addTransaction(userId, accountId, {
+    const { detail: account } = await addTransaction(userId, accountId, {
       type,
       amount,
       description: typeof description === "string" ? description : "",

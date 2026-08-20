@@ -1,0 +1,44 @@
+# Throwaway stack for the e2e suite: same image as production, a scratch
+# database with no volume, and the deterministic AI stub in place of a real
+# provider. Driven by scripts/e2e.sh.
+services:
+  # Session cookies are marked Secure in production, and neither a browser nor
+  # Playwright's request layer will send those over plain HTTP. Rather than
+  # weakening the cookie for tests, terminate TLS in front of the app with
+  # Caddy's internal CA -- so the suite exercises the real production cookie
+  # path. Playwright trusts the self-signed cert via ignoreHTTPSErrors.
+  proxy:
+    image: caddy:2-alpine
+    command: caddy reverse-proxy --from https://proxy --to app:3000 --internal-certs
+    depends_on:
+      - app
+
+  app:
+    build: .
+    environment:
+      - DATABASE_URL=postgres://fundsflow:fundsflow@db:5432/fundsflow
+      - SESSION_SECRET=e2e-only-secret
+      - AI_BASE_URL=http://aistub:8080/v1
+      - AI_API_KEY=e2e-key
+      - AI_MODEL=stub
+    depends_on:
+      db:
+        condition: service_healthy
+
+  aistub:
+    image: node:22-alpine
+    command: ["node", "/srv/server.mjs"]
+    volumes:
+      - ./tests/aistub/server.mjs:/srv/server.mjs:ro
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=fundsflow
+      - POSTGRES_PASSWORD=fundsflow
+      - POSTGRES_DB=fundsflow
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fundsflow"]
+      interval: 3s
+      timeout: 3s
+      retries: 20

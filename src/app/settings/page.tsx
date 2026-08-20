@@ -6,5 +6,11 @@ export default async function SettingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  return <SettingsForm email={user.email} currency={user.currency} />;
+  return (
+    <SettingsForm
+      email={user.email}
+      currency={user.currency}
+      defaultAccountId={user.defaultAccountId}
+    />
+  );
 }

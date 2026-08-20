@@ -60,12 +60,25 @@ export async function updateUserCurrency(userId: string, currency: string): Prom
   return updated ? toUser(updated) : null;
 }
 
+export async function updateUserDefaultAccount(
+  userId: string,
+  defaultAccountId: string | null
+): Promise<User | null> {
+  const [updated] = await db
+    .update(users)
+    .set({ defaultAccountId })
+    .where(eq(users.id, userId))
+    .returning();
+  return updated ? toUser(updated) : null;
+}
+
 function toUser(row: typeof users.$inferSelect): User {
   return {
     id: row.id,
     email: row.email,
     passwordHash: row.passwordHash,
     currency: row.currency,
+    defaultAccountId: row.defaultAccountId,
     createdAt: row.createdAt.toISOString(),
   };
 }
