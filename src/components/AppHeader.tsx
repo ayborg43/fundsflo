@@ -8,11 +8,16 @@ export default function AppHeader({
   title,
   backHref,
   backLabel,
+  email,
   onLogout,
 }: {
   title: string;
   backHref?: string;
   backLabel?: string;
+  // Shown inside the menu rather than on the screen itself: knowing which
+  // account you're in matters occasionally, and it was taking the most
+  // valuable strip on a phone.
+  email?: string;
   onLogout: () => void;
 }) {
   const pathname = usePathname();
@@ -25,8 +30,8 @@ export default function AppHeader({
     { label: "Statements", href: "/statements" },
     { label: "Budgets", href: "/budgets" },
     { label: "Bills", href: "/bills" },
-    { label: "Settings", href: "/settings" },
     { label: "Categories", href: "/categories" },
+    { label: "Settings", href: "/settings" },
     { label: "Log out", onClick: onLogout },
   ];
 
@@ -35,14 +40,14 @@ export default function AppHeader({
   const menuItems = allItems.filter((item) => item.href !== pathname);
 
   return (
-    <header className="flex items-center justify-between mb-6 gap-2">
-      <div className="w-10">
-        <MobileMenu items={menuItems} />
+    <header className="mb-6 flex shrink-0 items-center justify-between gap-2">
+      <div className="w-11">
+        <MobileMenu items={menuItems} email={email} />
       </div>
-      <h1 className="font-display text-3xl sm:text-5xl text-navy tracking-tight text-center truncate px-2">
+      <h1 className="font-display truncate px-2 text-center text-3xl tracking-tight text-navy sm:text-4xl">
         {title}
       </h1>
-      <div className="w-10" aria-hidden="true" />
+      <div className="w-11" aria-hidden="true" />
     </header>
   );
 }

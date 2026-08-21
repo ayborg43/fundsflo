@@ -53,18 +53,21 @@ export default function HomeClient({ email, currency }: { email: string; currenc
 
   return (
     <div data-testid="fundsflow-app" className="max-w-2xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7">
-      <AppHeader title="ACCOUNTS" onLogout={handleLogout} />
-
-      <p className="font-display text-sm text-navy/60 text-center -mt-4 mb-4 truncate">
-        {email}
-      </p>
+      <AppHeader title="ACCOUNTS" email={email} onLogout={handleLogout} />
 
       <div
         data-testid="net-worth-line"
-        className="flex items-center justify-between font-display text-navy mb-4 px-1"
+        className="mb-4 flex items-baseline justify-between px-1"
       >
-        <span className="text-sm text-navy/60 uppercase tracking-wide">Net worth</span>
-        <span className="text-2xl">{formatMoney(totalNetWorth, currency)}</span>
+        <span className="font-display text-xs uppercase tracking-[0.14em] text-ink-2">
+          Net worth
+        </span>
+        <span
+          className="font-display tnum text-2xl"
+          style={{ color: totalNetWorth < 0 ? "var(--gus-orange)" : "var(--gus-navy)" }}
+        >
+          {formatMoney(totalNetWorth, currency)}
+        </span>
       </div>
 
       {accounts.length === 0 ? (

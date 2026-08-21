@@ -1,12 +1,21 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import type { Budget, Category } from "@/lib/types";
 import { getCurrencySymbol } from "@/lib/currency";
 import BudgetJar from "@/components/BudgetJar";
+import AppHeader from "@/components/AppHeader";
 
 export default function BudgetsClient({ currency }: { currency: string }) {
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
   const [budgets, setBudgets] = useState<Budget[] | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState("");
@@ -45,13 +54,7 @@ export default function BudgetsClient({ currency }: { currency: string }) {
 
   return (
     <div className="max-w-sm mx-auto px-4 sm:px-6 pt-10 sm:pt-16">
-      <header className="flex items-center justify-between mb-6 gap-2">
-        <Link href="/" className="font-display text-xs sm:text-sm text-navy/70 underline">
-          ← Back
-        </Link>
-        <h1 className="font-display text-3xl sm:text-4xl text-navy tracking-tight">BUDGETS</h1>
-        <div className="w-10" />
-      </header>
+      <AppHeader title="BUDGETS" onLogout={handleLogout} />
 
       {!budgets ? (
         <p className="font-display text-sm text-navy/60 text-center">Loading...</p>

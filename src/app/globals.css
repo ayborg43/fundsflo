@@ -8,6 +8,12 @@
   --gus-lime: #7ce645;
   --gus-pink: #ff4d9d;
   --gus-cream: #fff7e8;
+  /* Secondary text. navy at 60% opacity lands near 3.4:1 on cream, under the
+     4.5:1 body floor, so secondary copy gets its own tinted-from-navy value
+     rather than a transparency that only looks right on white. */
+  --gus-ink-2: #565a94;
+  --gus-shadow: 0 6px 0 0 var(--gus-navy);
+  --gus-shadow-sm: 0 4px 0 0 var(--gus-navy);
 
   --background: var(--gus-cream);
   --foreground: var(--gus-navy);
@@ -23,6 +29,7 @@
   --color-lime: var(--gus-lime);
   --color-pink: var(--gus-pink);
   --color-cream: var(--gus-cream);
+  --color-ink-2: var(--gus-ink-2);
   --font-display: var(--font-fredoka);
   --font-sans: var(--font-nunito);
 }
@@ -41,8 +48,10 @@ body {
   opacity: 1;
   color: var(--gus-navy);
   font-family: var(--font-nunito), system-ui, sans-serif;
-  font-weight: 700;
+  font-weight: 600;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 body::before {
@@ -54,6 +63,50 @@ body::before {
   z-index: -1;
 }
 
+/* The parts we did not draw still belong to the design: selection, caret,
+   scrollbars and focus rings all ship with browser defaults otherwise. */
+::selection {
+  background: var(--gus-yellow);
+  color: var(--gus-navy);
+}
+
+:root {
+  caret-color: var(--gus-navy);
+  accent-color: var(--gus-navy);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--gus-navy) 35%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--gus-navy) 30%, transparent);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--gus-navy) 55%, transparent);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:focus-visible {
+  outline: 3px solid var(--gus-pink);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
 .font-display {
   font-family: var(--font-fredoka), system-ui, sans-serif;
   font-weight: 700;
@@ -62,6 +115,15 @@ body::before {
 
 .text-navy {
   color: var(--gus-navy);
+}
+
+.text-ink-2 {
+  color: var(--gus-ink-2);
+}
+
+/* Balances change constantly; lining figures keep them from jittering. */
+.tnum {
+  font-variant-numeric: tabular-nums;
 }
 
 .chunky-card {
@@ -93,10 +155,77 @@ body::before {
   transform: translateY(4px);
 }
 
-.chunky-btn:disabled {
-  opacity: 0.5;
+/* Opacity alone left a disabled primary still reading as a live green button.
+   Drain the colour, drop it onto its shadow, and stop the hover lift. */
+.chunky-btn:disabled,
+.chunky-btn[aria-disabled="true"] {
+  background: #ece7dc !important;
+  color: color-mix(in srgb, var(--gus-navy) 45%, transparent) !important;
+  border-color: color-mix(in srgb, var(--gus-navy) 40%, transparent);
+  box-shadow: 0 2px 0 0 color-mix(in srgb, var(--gus-navy) 40%, transparent);
   cursor: not-allowed;
-  transform: none;
+  transform: translateY(4px);
+}
+
+@media (hover: hover) {
+  .chunky-btn:disabled:hover,
+  .chunky-btn[aria-disabled="true"]:hover {
+    box-shadow: 0 2px 0 0 color-mix(in srgb, var(--gus-navy) 40%, transparent);
+    transform: translateY(4px);
+  }
+}
+
+/* One control style for every text input, select and date field. Inputs were
+   being hand-rolled per component, which is why radii and borders drifted. */
+.chunky-field {
+  background: #fff;
+  border: 3px solid var(--gus-navy);
+  border-radius: 18px;
+  color: var(--gus-navy);
+  font-family: var(--font-nunito), system-ui, sans-serif;
+  font-weight: 700;
+  padding: 0.7rem 0.9rem;
+  width: 100%;
+  transition: box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.chunky-field::placeholder {
+  color: color-mix(in srgb, var(--gus-navy) 55%, transparent);
+}
+
+.chunky-field:focus {
+  outline: none;
+  border-color: var(--gus-navy);
+  box-shadow: var(--gus-shadow-sm);
+}
+
+.chunky-field:disabled {
+  background: #f3efe6;
+  color: color-mix(in srgb, var(--gus-navy) 50%, transparent);
+  cursor: not-allowed;
+}
+
+/* Native select and date chrome is the one thing that broke the illusion:
+   an OS chevron and an OS calendar glyph inside a fully drawn interface.
+   Draw both from the palette instead. */
+.chunky-field--select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232a2d7c' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 9l7 7 7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 1.05rem;
+  padding-right: 2.6rem;
+}
+
+.chunky-field--date::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  /* Recolour the stock indicator to navy instead of shipping OS grey. */
+  filter: invert(16%) sepia(43%) saturate(2266%) hue-rotate(226deg) brightness(94%) contrast(96%);
+  opacity: 0.85;
+}
+
+.chunky-field--date::-webkit-datetime-edit {
+  font-variant-numeric: tabular-nums;
 }
 
 .numpad-key {
@@ -174,6 +303,53 @@ body::before {
 
 .drawer-slide-in {
   animation: drawer-slide-in 0.2s ease-out;
+}
+
+/* The one authored moment in the chat: a reply arrives by rising into place.
+   Everything else stays still so this reads. */
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.bubble-in {
+  animation: bubble-in 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble-in,
+  .feed-item,
+  .modal-slide-up,
+  .drawer-slide-in,
+  .goal-wobble {
+    animation: none;
+  }
+
+  .chunky-btn {
+    transition: none;
+  }
+}
+
+/* Three dots that actually breathe, instead of a sentence that says "loading". */
+@keyframes typing-bounce {
+  0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-4px); }
+}
+
+.typing-dot {
+  animation: typing-bounce 1.2s ease-in-out infinite;
+  background: var(--gus-navy);
+  border-radius: 999px;
+  display: inline-block;
+  height: 7px;
+  width: 7px;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-dot { animation: none; opacity: 0.6; }
 }
 
 @keyframes feed-item-in {

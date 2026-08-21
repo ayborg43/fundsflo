@@ -100,7 +100,11 @@ test.describe("logging money from the chat", () => {
     await sendMessage(page, "yesterday I spent 15 on snacks");
 
     const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-    await expect(page.getByTestId("draft-date")).toHaveValue(yesterday);
+    // The date is chips now, with the native picker only behind "Another day".
+    await expect(page.getByTestId("draft-when-yesterday")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
 
     await page.getByTestId("draft-save-btn").click();
     await expect(page.getByTestId("chat-msg-assistant").last()).toContainText(yesterday);

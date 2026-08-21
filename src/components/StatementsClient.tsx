@@ -1,10 +1,19 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import type { Statement } from "@/lib/statements";
+import AppHeader from "@/components/AppHeader";
 
 export default function StatementsClient() {
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
   const [statements, setStatements] = useState<Statement[] | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,13 +55,7 @@ export default function StatementsClient() {
 
   return (
     <div className="max-w-sm mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-12">
-      <header className="flex items-center justify-between mb-6 gap-2">
-        <Link href="/" className="font-display text-xs sm:text-sm text-navy/70 underline">
-          ← Back
-        </Link>
-        <h1 className="font-display text-3xl sm:text-4xl text-navy tracking-tight">STATEMENTS</h1>
-        <div className="w-10" />
-      </header>
+      <AppHeader title="STATEMENTS" onLogout={handleLogout} />
 
       <div
         data-testid="upload-statement-card"

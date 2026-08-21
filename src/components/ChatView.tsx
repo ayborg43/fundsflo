@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import Confetti, { makeConfettiPieces } from "@/components/Confetti";
+import Icon from "@/components/Icon";
 import TransactionDraftCard from "@/components/TransactionDraftCard";
 import CategoryDraftCard from "@/components/CategoryDraftCard";
 import { formatMoney } from "@/lib/format";
@@ -18,6 +19,8 @@ type Message = { id: string; role: "user" | "assistant"; content: string };
 type Pending =
   | { kind: "transaction"; userText: string; draft: TransactionDraft }
   | { kind: "category"; userText: string; draft: CategoryDraft };
+
+const OPENERS = ["Spent 12 on lunch", "Made 50 from chores", "Review my spending"];
 
 let localId = 0;
 function nextId(role: string): string {
@@ -35,15 +38,17 @@ export default function ChatView({ email, currency }: { email: string; currency:
   const [draftError, setDraftError] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  // Which one-shot action is in flight ("recap" | "forecast" | "upload"), so
-  // the whole composer can lock without a boolean per button.
+  // Which one-shot action is in flight ("upload" | "undo"), so the whole
+  // composer can lock without a boolean per control.
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confetti, setConfetti] = useState<ReturnType<typeof makeConfettiPieces>>([]);
   // The entry most recently logged from the chat, kept only until the next
   // action, so Undo always refers to something unambiguous.
   const [lastLog, setLastLog] = useState<{ transactionId: string; accountId: string } | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pendingRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const locked = sending || savingDraft || busy !== null || pending !== null;
@@ -60,8 +65,20 @@ export default function ChatView({ email, currency }: { email: string; currency:
       .then((data) => setCategories(data.categories ?? []));
   }, []);
 
+  // Scroll the transcript, never the page. scrollIntoView used to move the
+  // window instead, which pushed the header off-screen.
+  //
+  // A confirmation card is taller than a reply, so scrolling to the bottom
+  // would hide the message that produced it. Bring the top of that exchange
+  // into view instead, and only chase the bottom for ordinary messages.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = scrollRef.current;
+    if (!el) return;
+    if (pending && pendingRef.current) {
+      pendingRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, pending, busy]);
 
   useEffect(() => {
@@ -179,6 +196,7 @@ export default function ChatView({ email, currency }: { email: string; currency:
     setInput(pending?.userText ?? "");
     setPending(null);
     setDraftError(null);
+    inputRef.current?.focus();
   }
 
   async function undoLastLog() {
@@ -236,179 +254,227 @@ export default function ChatView({ email, currency }: { email: string; currency:
 
   // Debt balances are stored negative, so a plain sum already nets them off.
   const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0);
+  const inTheRed = netWorth < 0;
+  const isEmpty = messages.length === 0 && !pending && !busy;
 
   return (
-    <div
-      data-testid="chat-view"
-      className="max-w-2xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7 pb-4 flex flex-col"
-      style={{ height: "100dvh" }}
-    >
+    // Fixed to the viewport: the page itself must never scroll here, or the
+    // header slides away as the transcript grows.
+    <div data-testid="chat-view" className="fixed inset-0 flex flex-col overflow-hidden">
       <Confetti pieces={confetti} />
 
-      <AppHeader title="FUNDSFLOW" onLogout={handleLogout} />
+      <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-4 pb-4 pt-5 sm:px-6 sm:pt-7">
+        <AppHeader title="FUNDSFLOW" email={email} onLogout={handleLogout} />
 
-      <div
-        data-testid="net-worth-line"
-        className="flex items-center justify-between font-display text-navy -mt-3 mb-3 px-1"
-      >
-        <span className="text-sm text-navy/60 uppercase tracking-wide truncate">{email}</span>
-        <span className="text-xl whitespace-nowrap">{formatMoney(netWorth, currency)}</span>
-      </div>
+        <div
+          data-testid="net-worth-line"
+          className="-mt-3 mb-3 flex shrink-0 items-baseline justify-between px-1"
+        >
+          <span className="font-display text-xs uppercase tracking-[0.14em] text-ink-2">
+            Net worth
+          </span>
+          <span
+            className="font-display tnum text-2xl"
+            style={{ color: inTheRed ? "var(--gus-orange)" : "var(--gus-navy)" }}
+          >
+            {formatMoney(netWorth, currency)}
+          </span>
+        </div>
 
-      <div
-        data-testid="chat-messages"
-        className="flex-1 overflow-y-auto chunky-card p-4 sm:p-5 mb-3"
-        style={{ backgroundColor: "white" }}
-      >
-        {messages.length === 0 && !pending && !busy ? (
-          <div className="font-display text-navy/60 text-center mt-8 px-2">
-            <p className="text-lg mb-2">Just tell me what happened! 💬</p>
-            <p className="text-sm">
-              Try &ldquo;spent 12 on lunch&rdquo;, &ldquo;made 50 from chores&rdquo;, or
-              &ldquo;add a category for pets&rdquo;. Ask me to review your spending or where
-              you&rsquo;re headed, or send me a statement with 📎.
-            </p>
-            {accounts.length === 0 && (
-              <p className="text-sm mt-3">
-                Add an account from the menu first so I have somewhere to put it.
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  data-testid={`chat-msg-${m.role}`}
-                  className="font-display max-w-[80%] rounded-2xl px-4 py-2 border-3 border-navy whitespace-pre-wrap"
-                  style={{
-                    backgroundColor: m.role === "user" ? "var(--gus-cyan)" : "var(--gus-cream)",
-                    borderWidth: 3,
-                  }}
-                >
-                  {m.content || (m.role === "assistant" ? "..." : "")}
-                </div>
-              </div>
-            ))}
+        <div
+          ref={scrollRef}
+          data-testid="chat-messages"
+          className="chunky-card mb-3 min-h-0 flex-1 overflow-y-auto"
+        >
+          <div
+            className={`flex min-h-full flex-col gap-3 p-4 sm:p-5 ${
+              isEmpty ? "justify-center" : "justify-end"
+            }`}
+          >
+            {isEmpty ? (
+              <div className="text-center">
+                <p className="font-display text-2xl text-navy">Tell me what happened</p>
+                <p className="mx-auto mt-2 max-w-[42ch] text-[0.95rem] leading-relaxed text-ink-2">
+                  I&rsquo;ll turn it into a transaction — you check it before it&rsquo;s saved. You
+                  can also ask me anything about your money, or send a statement with the clip.
+                </p>
 
-            {pending && (
-              <>
-                <div className="flex justify-end">
-                  <div
-                    data-testid="chat-msg-user"
-                    className="font-display max-w-[80%] rounded-2xl px-4 py-2 border-3 border-navy whitespace-pre-wrap"
-                    style={{ backgroundColor: "var(--gus-cyan)", borderWidth: 3 }}
-                  >
-                    {pending.userText}
+                {accounts.length === 0 ? (
+                  <p className="mt-4 text-sm text-ink-2">
+                    Add an account from the menu first, so I have somewhere to put it.
+                  </p>
+                ) : (
+                  <div className="mt-5 flex flex-wrap justify-center gap-2">
+                    {OPENERS.map((opener) => (
+                      <button
+                        key={opener}
+                        type="button"
+                        data-testid="chat-opener"
+                        onClick={() => {
+                          setInput(opener.toLowerCase());
+                          inputRef.current?.focus();
+                        }}
+                        className="rounded-full border-2 border-navy/25 px-3 py-1.5 text-sm text-ink-2 transition-colors hover:border-navy hover:text-navy"
+                      >
+                        {opener}
+                      </button>
+                    ))}
                   </div>
-                </div>
-                <div className="flex justify-start">
-                  {pending.kind === "transaction" ? (
-                    <TransactionDraftCard
-                      draft={pending.draft}
-                      currency={currency}
-                      accounts={accounts}
-                      categories={categories}
-                      saving={savingDraft}
-                      error={draftError}
-                      onChange={(next) => setPending({ ...pending, draft: next })}
-                      onSave={saveDraft}
-                      onCancel={cancelDraft}
-                    />
-                  ) : (
-                    <CategoryDraftCard
-                      draft={pending.draft}
-                      saving={savingDraft}
-                      error={draftError}
-                      onChange={(next) => setPending({ ...pending, draft: next })}
-                      onSave={saveDraft}
-                      onCancel={cancelDraft}
-                    />
-                  )}
-                </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {messages.map((m) => (
+                  <div
+                    key={m.id}
+                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      data-testid={`chat-msg-${m.role}`}
+                      className={`bubble-in max-w-[85%] whitespace-pre-wrap rounded-2xl border-3 border-navy px-4 py-2.5 leading-relaxed ${
+                        m.role === "user" ? "" : "text-[0.97rem]"
+                      }`}
+                      style={{
+                        backgroundColor:
+                          m.role === "user" ? "var(--gus-cyan)" : "var(--gus-cream)",
+                        borderWidth: 3,
+                      }}
+                    >
+                      {m.content || (m.role === "assistant" ? "…" : "")}
+                    </div>
+                  </div>
+                ))}
+
+                {pending && (
+                  <div ref={pendingRef} className="flex scroll-mt-2 flex-col gap-3">
+                    <div className="flex justify-end">
+                      <div
+                        data-testid="chat-msg-user"
+                        className="max-w-[85%] whitespace-pre-wrap rounded-2xl border-3 border-navy px-4 py-2.5 leading-relaxed"
+                        style={{ backgroundColor: "var(--gus-cyan)", borderWidth: 3 }}
+                      >
+                        {pending.userText}
+                      </div>
+                    </div>
+                    <div className="flex justify-start">
+                      {pending.kind === "transaction" ? (
+                        <TransactionDraftCard
+                          draft={pending.draft}
+                          currency={currency}
+                          accounts={accounts}
+                          categories={categories}
+                          saving={savingDraft}
+                          error={draftError}
+                          onChange={(next) => setPending({ ...pending, draft: next })}
+                          onSave={saveDraft}
+                          onCancel={cancelDraft}
+                        />
+                      ) : (
+                        <CategoryDraftCard
+                          draft={pending.draft}
+                          saving={savingDraft}
+                          error={draftError}
+                          onChange={(next) => setPending({ ...pending, draft: next })}
+                          onSave={saveDraft}
+                          onCancel={cancelDraft}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {busy && (
+                  <div className="flex justify-start">
+                    <div
+                      data-testid="chat-busy"
+                      className="bubble-in flex items-center gap-2 rounded-2xl border-3 border-navy px-4 py-2.5 text-ink-2"
+                      style={{ backgroundColor: "var(--gus-cream)", borderWidth: 3 }}
+                    >
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                      <span className="ml-1 text-sm">
+                        {busy === "undo" ? "Putting that back" : "Reading your statement"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {lastLog && !busy && (
+                  <div className="flex justify-start">
+                    <button
+                      data-testid="undo-log-btn"
+                      onClick={undoLastLog}
+                      className="flex items-center gap-1.5 rounded-full border-2 border-navy/25 px-3 py-1.5 text-sm text-ink-2 transition-colors hover:border-navy hover:text-navy"
+                    >
+                      <Icon name="undo" size={16} />
+                      Undo that
+                    </button>
+                  </div>
+                )}
               </>
             )}
+          </div>
+        </div>
 
-            {busy && (
-              <div className="flex justify-start">
-                <div
-                  data-testid="chat-busy"
-                  className="font-display rounded-2xl px-4 py-2 border-3 border-navy"
-                  style={{ backgroundColor: "var(--gus-cream)", borderWidth: 3 }}
-                >
-                  {busy === "undo" ? "Putting that back… ↩️" : "Reading your statement… 📄"}
-                </div>
-              </div>
-            )}
-            {lastLog && !busy && (
-              <div className="flex justify-start">
-                <button
-                  data-testid="undo-log-btn"
-                  onClick={undoLastLog}
-                  className="chunky-btn px-3 py-2 text-sm text-navy"
-                  style={{ backgroundColor: "white" }}
-                >
-                  ↩️ Undo that
-                </button>
-              </div>
-            )}
-            <div ref={bottomRef} />
+        {error && (
+          <div
+            data-testid="chat-error"
+            className="mb-2 shrink-0 rounded-2xl px-4 py-2 text-sm text-white"
+            style={{ backgroundColor: "var(--gus-orange)" }}
+          >
+            {error}
           </div>
         )}
+
+        <form onSubmit={send} className="flex shrink-0 items-center gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,.xls,.xlsx"
+            className="hidden"
+            onChange={uploadStatement}
+            data-testid="chat-upload-input"
+          />
+          <button
+            type="button"
+            data-testid="chat-upload-btn"
+            aria-label="Upload a statement"
+            onClick={() => fileRef.current?.click()}
+            disabled={locked}
+            className="chunky-btn flex shrink-0 items-center justify-center bg-white text-navy"
+            style={{ height: 52, width: 52, borderRadius: 999 }}
+          >
+            <Icon name="paperclip" />
+          </button>
+          <input
+            ref={inputRef}
+            data-testid="chat-input"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={pending ? "Check the card above first" : "Spent 12 on lunch…"}
+            disabled={!!pending || busy !== null}
+            aria-label="Message Money Buddy"
+            className="chunky-field min-w-0 flex-1"
+            style={{ height: 52, borderRadius: 999, paddingInline: "1.1rem" }}
+          />
+          <button
+            data-testid="chat-send-btn"
+            type="submit"
+            aria-label="Send"
+            disabled={locked || !input.trim()}
+            className="chunky-btn flex shrink-0 items-center justify-center text-navy"
+            style={{
+              height: 52,
+              width: 52,
+              borderRadius: 999,
+              backgroundColor: "var(--gus-lime)",
+            }}
+          >
+            <Icon name="send" />
+          </button>
+        </form>
       </div>
-
-      {error && (
-        <div
-          data-testid="chat-error"
-          className="font-display text-sm text-white px-4 py-2 rounded-2xl mb-2"
-          style={{ backgroundColor: "var(--gus-orange)" }}
-        >
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={send} className="flex gap-2">
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,.xls,.xlsx"
-          className="hidden"
-          onChange={uploadStatement}
-          data-testid="chat-upload-input"
-        />
-        <button
-          type="button"
-          data-testid="chat-upload-btn"
-          aria-label="Upload a statement"
-          onClick={() => fileRef.current?.click()}
-          disabled={locked}
-          className="chunky-btn px-4 text-xl text-navy disabled:opacity-60"
-          style={{ backgroundColor: "white" }}
-        >
-          📎
-        </button>
-        <input
-          data-testid="chat-input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={pending ? "Confirm above first…" : "Spent 12 on lunch…"}
-          disabled={!!pending || busy !== null}
-          className="flex-1 font-display text-lg text-navy rounded-2xl border-4 border-navy px-4 py-3 outline-none bg-white min-w-0 disabled:opacity-60"
-          style={{ boxShadow: "var(--gus-navy) 0px 4px 0px 0px" }}
-        />
-        <button
-          data-testid="chat-send-btn"
-          type="submit"
-          disabled={locked || !input.trim()}
-          className="chunky-btn px-5 text-xl text-navy"
-          style={{ backgroundColor: "var(--gus-lime)" }}
-        >
-          {sending ? "…" : "→"}
-        </button>
-      </form>
     </div>
   );
 }

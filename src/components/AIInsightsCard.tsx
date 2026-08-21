@@ -65,7 +65,7 @@ export default function AIInsightsCard() {
       {result && (
         <div
           data-testid={`ai-${result.kind}-result`}
-          className="font-display text-sm text-navy bg-white rounded-2xl p-3 border-2 border-navy whitespace-pre-wrap"
+          className="whitespace-pre-wrap rounded-2xl border-2 border-navy bg-white p-3 text-sm leading-relaxed text-navy"
         >
           {result.text}
         </div>

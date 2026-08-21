@@ -1,12 +1,21 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import type { Category } from "@/lib/types";
+import AppHeader from "@/components/AppHeader";
 
 const DEFAULT_EMOJI = "🏷️";
 
 export default function CategoriesClient() {
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
   const [categories, setCategories] = useState<Category[] | null>(null);
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState(DEFAULT_EMOJI);
@@ -38,15 +47,7 @@ export default function CategoriesClient() {
 
   return (
     <div className="max-w-sm mx-auto px-4 sm:px-6 pt-10 sm:pt-16">
-      <header className="flex items-center justify-between mb-6 gap-2">
-        <Link href="/" className="font-display text-xs sm:text-sm text-navy/70 underline">
-          ← Back
-        </Link>
-        <h1 className="font-display text-3xl sm:text-4xl text-navy tracking-tight">
-          CATEGORIES
-        </h1>
-        <div className="w-10" />
-      </header>
+      <AppHeader title="CATEGORIES" onLogout={handleLogout} />
 
       <div
         data-testid="categories-card"
