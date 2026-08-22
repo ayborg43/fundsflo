@@ -77,19 +77,30 @@ export type TransactionDraft = {
   date: string | null;
 };
 
+export type BudgetPeriod = "day" | "week" | "month";
+
 export type Budget = {
   id: string;
   categoryId: string;
-  monthlyLimit: number;
-  spentThisMonth: number;
+  period: BudgetPeriod;
+  limitAmount: number;
+  spentThisPeriod: number;
   createdAt: string;
 };
+
+export type BillRecurrence = "monthly" | "once";
 
 export type Bill = {
   id: string;
   name: string;
   amount: number;
-  dueDayOfMonth: number;
+  recurrence: BillRecurrence;
+  /** Monthly bills only. */
+  dueDayOfMonth: number | null;
+  /** One-off payments only, ISO timestamp. */
+  dueDate: string | null;
+  /** Null when no reminder is wanted. */
+  remindDaysBefore: number | null;
   accountId: string | null;
   categoryId: string | null;
   lastPaidAt: string | null;

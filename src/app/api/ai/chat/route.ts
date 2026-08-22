@@ -3,10 +3,12 @@ import { getSessionUserId } from "@/lib/auth";
 import { findUserById } from "@/lib/users";
 import { listAccounts } from "@/lib/accounts";
 import { listCategories } from "@/lib/categories";
+import { listBills } from "@/lib/bills";
 import { getMessages, getPromptMessages, saveMessage } from "@/lib/ai/messages";
-import { buildFinancialContext, buildSystemPrompt } from "@/lib/ai/context";
-import { extractChatIntent } from "@/lib/ai/extract";
-import { streamChatCompletion, type ChatMessage } from "@/lib/ai/client";
+import { buildFinancialContext, buildSystemPrompt, buildActionPrompt } from "@/lib/ai/context";
+import { buildTools } from "@/lib/ai/tools";
+import { proposalsFrom, type Proposal } from "@/lib/ai/propose";
+import { streamChatCompletion, requestToolCalls, type ChatMessage } from "@/lib/ai/client";
 import { friendlyAIError } from "@/lib/ai/errors";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
@@ -36,19 +38,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Message required" }, { status: 400 });
   }
 
-  //Each message costs two upstream calls (classify, then answer), so the guard
-  // goes here -- before either one is made.
+  // Each message costs two upstream calls (decide actions, then answer), so
+  // the guard goes here -- before either one is made.
   const limited = checkRateLimit(userId, "chat");
   if (!limited.ok) return rateLimitResponse(limited.retryAfterSeconds);
 
-  // Does this message record money, or ask for a new category? Run this BEFORE
-  // persisting anything: a draft isn't committed until the user confirms it on
-  // the card, so saving the message now would leave an orphan turn in the
-  // history (and in the context every later answer is built from) if they
-  // cancel.
-  const intent = await intentFromMessage(userId, content, user.currency, user.defaultAccountId);
-  if (intent) {
-    return NextResponse.json({ ...intent, userText: content });
+  // Does this message ask for anything to be recorded or changed? Run this
+  // BEFORE persisting: proposals are not committed until the user confirms
+  // them, so saving the message now would leave an orphan turn in the history
+  // (and in the context every later answer is built from) if they cancel.
+  const proposals = await proposeActions(userId, content, user.currency, user.defaultAccountId);
+  if (proposals.length > 0) {
+    return NextResponse.json({ kind: "proposals", proposals, userText: content });
   }
 
   await saveMessage(userId, "user", content);
@@ -94,26 +95,45 @@ export async function POST(request: NextRequest) {
   });
 }
 
-// A failed extraction must never cost the user their message -- if the
-// classifier call errors out, fall through and answer as normal chat.
-async function intentFromMessage(
+// A failed action pass must never cost the user their message -- if the call
+// errors out, fall through and answer as normal conversation.
+async function proposeActions(
   userId: string,
   content: string,
   currency: string,
   defaultAccountId: string | null
-) {
+): Promise<Proposal[]> {
   try {
-    const [accounts, categories] = await Promise.all([
+    const [accounts, categories, bills] = await Promise.all([
       listAccounts(userId),
       listCategories(userId),
+      listBills(userId),
     ]);
-    return await extractChatIntent(content, {
+
+    // Server clock, UTC. Dates only ever seed a proposal, and the user sees
+    // and can change them on the card before anything is written.
+    const today = new Date().toISOString().slice(0, 10);
+
+    const { toolCalls } = await requestToolCalls(
+      [
+        {
+          role: "system",
+          content: buildActionPrompt(accounts, categories, bills, currency, today),
+        },
+        { role: "user", content },
+      ],
+      buildTools()
+    );
+
+    return proposalsFrom(toolCalls, {
       accounts,
       categories,
-      currency,
+      bills,
       defaultAccountId,
+      today,
     });
-  } catch {
-    return null;
+  } catch (err) {
+    friendlyAIError(err, "action pass");
+    return [];
   }
 }

@@ -84,6 +84,8 @@ export const aiMessages = pgTable("ai_messages", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const budgetPeriods = ["day", "week", "month"] as const;
+
 export const budgets = pgTable("budgets", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
@@ -92,10 +94,19 @@ export const budgets = pgTable("budgets", {
   categoryId: uuid("category_id")
     .notNull()
     .references(() => categories.id, { onDelete: "cascade" }),
-  monthlyLimit: numeric("monthly_limit", { mode: "number" }).notNull(),
+  // Spend allowed per period. Weeks are calendar weeks (Monday-based) and
+  // months calendar months, so "am I over budget?" doesn't answer differently
+  // every day the way a rolling window would.
+  period: text("period", { enum: budgetPeriods }).notNull().default("month"),
+  limitAmount: numeric("limit_amount", { mode: "number" }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const billRecurrences = ["monthly", "once"] as const;
+
+// Covers both a recurring bill and a one-off thing you owe. They differ only
+// in when they fall due, so they stay one concept rather than two near
+// identical tables that drift apart.
 export const recurringBills = pgTable("recurring_bills", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
@@ -105,8 +116,28 @@ export const recurringBills = pgTable("recurring_bills", {
   categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   amount: numeric("amount", { mode: "number" }).notNull(),
-  dueDayOfMonth: numeric("due_day_of_month", { mode: "number" }).notNull(),
+  recurrence: text("recurrence", { enum: billRecurrences }).notNull().default("monthly"),
+  // Monthly bills use the day of the month; one-off payments use the date.
+  // Exactly one is set, decided by `recurrence`.
+  dueDayOfMonth: numeric("due_day_of_month", { mode: "number" }),
+  dueDate: timestamp("due_date", { withTimezone: true }),
+  // Null means no reminder wanted. Otherwise, how many days ahead to nudge.
+  remindDaysBefore: numeric("remind_days_before", { mode: "number" }),
+  lastRemindedAt: timestamp("last_reminded_at", { withTimezone: true }),
   lastPaidAt: timestamp("last_paid_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// One row per browser that agreed to receive reminders. Endpoints are unique;
+// a browser re-subscribing replaces its own row rather than adding another.
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

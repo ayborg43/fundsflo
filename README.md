@@ -1,6 +1,9 @@
 # FundsFlow
 
-A fun, chunky money tracker for kids — earnings, spending, and savings goals — built on [Next.js](https://nextjs.org) and bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+A money tracker for everyone — earnings, spending, bills, budgets and savings goals — that
+you drive by saying what happened. The chunky, playful look is the point: it is an
+ordinary personal-finance app that is actually enjoyable to open. Built on
+[Next.js](https://nextjs.org).
 
 ## Chat-first home screen
 
@@ -8,6 +11,31 @@ The home screen is the Money Buddy chat. You type what happened in plain languag
 ("spent 12 on lunch", "made 50 from chores") and it becomes a transaction; you can
 also just ask questions about your money. Everything else — accounts, insights,
 budgets, bills, statements, categories, settings — lives behind the ☰ menu.
+
+### Driving the app by talking to it
+
+The chat is a command surface, not just a logger. It can record a transaction,
+create or delete a category, add an account, change the currency, add a monthly
+bill or a one-off payment, mark a bill paid, set a reminder, and set a spending
+limit per day, week or month. Anything that isn't a change -- "what's my
+balance?", "am I over my food budget?", "what's due?" -- is answered in
+conversation, because the whole picture is already in the prompt.
+
+This runs on **tool calling** (`src/lib/ai/tools.ts`). The first version used a
+hand-rolled JSON classifier, which was right for one action and wrong for nine:
+a classifier returns a single intent per message, and a nine-way branch in one
+prompt is brittle. Tool calling gives typed arguments, schema validation at the
+model boundary, and several actions from one sentence -- *"switch me to naira and
+add my netflix bill"* comes back as two calls and is confirmed as two cards.
+
+Every tool mutates something. There are deliberately no read tools, so a message
+is one model call: propose, confirm, execute. Nothing the model returns is
+executed directly -- `src/app/api/ai/act/route.ts` re-validates every argument
+against what the user actually owns, so a misheard "delete my food category"
+costs a tap rather than data.
+
+Cards are generated from `src/lib/actions.ts`, one descriptor per action, so a
+tenth action is a few lines of data rather than another card component.
 
 Logging works in two passes, both through the same provider-agnostic AI config:
 
@@ -85,7 +113,7 @@ by replica count.
 
 Upstream failures never reach the browser verbatim. `friendlyAIError` logs the
 provider payload server-side and returns a short message, because provider responses
-carry model names and pool diagnostics that don't belong in a kid-facing chat bubble.
+carry model names and pool diagnostics that don't belong in a chat bubble.
 
 ## Getting Started
 
@@ -115,6 +143,31 @@ To learn more about Next.js, take a look at the following resources:
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Bill reminders
+
+Reminders are opt-in and entirely optional. Without VAPID keys the app runs
+exactly as before and Settings says so rather than offering a switch that does
+nothing.
+
+1. `npx web-push generate-vapid-keys`
+2. Set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` and a random
+   `CRON_SECRET`.
+3. Add a **daily scheduled task** in Dokploy that calls:
+
+```bash
+curl -X POST https://your-domain/api/cron/reminders \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+There is no in-process timer on purpose: a `setInterval` dies with the container
+and fires once per replica, whereas a scheduled task is visible, retryable and
+testable with curl. The job nudges from the lead time up to the due day (so a
+missed run still catches the bill) and at most once per bill per day.
+
+Each browser opts in separately from Settings. On iPhone this only works once
+the app is added to the home screen — that is an iOS limitation on web push, not
+a bug.
 
 ## Tests
 

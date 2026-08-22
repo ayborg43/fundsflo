@@ -12,8 +12,8 @@ export default function BudgetJar({
   currency: string;
   onDelete: (id: string) => void;
 }) {
-  const percent = budget.monthlyLimit > 0 ? Math.min(100, (budget.spentThisMonth / budget.monthlyLimit) * 100) : 0;
-  const overBudget = budget.spentThisMonth > budget.monthlyLimit;
+  const percent = budget.limitAmount > 0 ? Math.min(100, (budget.spentThisPeriod / budget.limitAmount) * 100) : 0;
+  const overBudget = budget.spentThisPeriod > budget.limitAmount;
 
   return (
     <div
@@ -48,8 +48,8 @@ export default function BudgetJar({
         />
       </div>
       <div className="flex justify-between font-display text-sm text-navy mt-1">
-        <span>{formatMoney(budget.spentThisMonth, currency)} spent</span>
-        <span>of {formatMoney(budget.monthlyLimit, currency)}</span>
+        <span>{formatMoney(budget.spentThisPeriod, currency)} spent</span>
+        <span>of {formatMoney(budget.limitAmount, currency)}</span>
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ test.describe("the rest of the chat surface", () => {
 
     await sendMessage(page, "how am I doing this month?");
 
-    await expect(page.getByTestId("draft-card")).toBeHidden();
+    await expect(page.getByTestId("action-card")).toBeHidden();
     await expect(page.getByTestId("chat-msg-assistant").last()).toContainText("Stub answer");
 
     const accounts = await (await page.request.get("/api/accounts")).json();
@@ -30,14 +30,14 @@ test.describe("the rest of the chat surface", () => {
 
     await sendMessage(page, "add a category for pets");
 
-    await expect(page.getByTestId("category-draft-card")).toBeVisible();
-    await expect(page.getByTestId("category-draft-name")).toHaveValue(/pets/i);
+    await expect(page.getByTestId("action-card")).toBeVisible();
+    await expect(page.getByTestId("field-name")).toHaveValue(/pets/i);
 
     // Not created until confirmed.
     let listed = await (await page.request.get("/api/categories")).json();
     expect(listed.categories).toHaveLength(0);
 
-    await page.getByTestId("category-draft-save-btn").click();
+    await page.getByTestId("action-save-btn").click();
     await expect(page.getByTestId("chat-msg-assistant").last()).toContainText("category");
 
     listed = await (await page.request.get("/api/categories")).json();
@@ -52,9 +52,9 @@ test.describe("the rest of the chat surface", () => {
     await page.goto("/");
 
     await sendMessage(page, "add a category for pets");
-    await page.getByTestId("category-draft-save-btn").click();
+    await page.getByTestId("action-save-btn").click();
 
-    await expect(page.getByTestId("category-draft-card")).toContainText("already have");
+    await expect(page.getByTestId("action-card")).toContainText("already have");
     const listed = await (await page.request.get("/api/categories")).json();
     expect(listed.categories).toHaveLength(1);
   });
@@ -123,11 +123,11 @@ test.describe("guard rails", () => {
 
     // Against a debt account "spend" is a new charge and "make" pays it down;
     // Made/Spent would read backwards.
-    await expect(page.getByTestId("draft-card")).toContainText("New charge");
-    await expect(page.getByTestId("draft-type-spend")).toContainText("Charged");
-    await expect(page.getByTestId("draft-type-make")).toContainText("Paid off");
+    await expect(page.getByTestId("action-card")).toContainText("New charge");
+    await expect(page.getByTestId("field-type-spend")).toContainText("Charged");
+    await expect(page.getByTestId("field-type-make")).toContainText("Paid off");
 
-    await page.getByTestId("draft-save-btn").click();
+    await page.getByTestId("action-save-btn").click();
     // And the balance reads as an amount owed, not a negative number.
     await expect(page.getByTestId("chat-msg-assistant").last()).toContainText("You owe");
   });
@@ -187,9 +187,9 @@ test.describe("what the model is actually sent", () => {
     await sendMessage(page, "am I over my food budget?");
 
     const stats = await stubStats(page.request);
-    expect(stats.lastSystemPrompt).toContain("Budgets (this calendar month)");
+    expect(stats.lastSystemPrompt).toContain("Budgets (spend so far in the current period)");
     expect(stats.lastSystemPrompt).toContain("Food");
-    expect(stats.lastSystemPrompt).toContain("Recurring bills");
+    expect(stats.lastSystemPrompt).toContain("Bills and payments due");
     expect(stats.lastSystemPrompt).toContain("Netflix");
   });
 

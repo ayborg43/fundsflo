@@ -2,9 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "FundsFlow | Kid Money Tracker",
+    name: "FundsFlow — Money Tracking That Doesn't Feel Like Homework",
     short_name: "FundsFlow",
-    description: "A fun, chunky money tracker for kids — track earnings, spending, and savings goals.",
+    description:
+      "Track earnings, spending, bills, budgets and savings goals by just saying what happened. Chat-first, and built to be enjoyable to use.",
     start_url: "/",
     display: "standalone",
     background_color: "#fff7e8",

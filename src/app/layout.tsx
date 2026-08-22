@@ -16,8 +16,9 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "FundsFlow | Kid Money Tracker",
-  description: "A fun, chunky money tracker for kids — track earnings, spending, and savings goals.",
+  title: "FundsFlow — Money Tracking That Doesn't Feel Like Homework",
+  description:
+    "Track earnings, spending, bills, budgets and savings goals by just saying what happened. Chat-first, and built to be enjoyable to use.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

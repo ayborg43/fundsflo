@@ -26,7 +26,11 @@ function getConfig() {
   return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey, model };
 }
 
-async function requestCompletion(messages: ChatMessage[], stream: boolean) {
+async function requestCompletion(
+  messages: ChatMessage[],
+  stream: boolean,
+  extra: Record<string, unknown> = {}
+) {
   const { baseUrl, apiKey, model } = getConfig();
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
@@ -34,7 +38,7 @@ async function requestCompletion(messages: ChatMessage[], stream: boolean) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ model, messages, stream }),
+    body: JSON.stringify({ model, messages, stream, ...extra }),
   });
 
   if (!res.ok) {
@@ -89,4 +93,87 @@ export async function getChatCompletion(messages: ChatMessage[]): Promise<string
   const res = await requestCompletion(messages, false);
   const data = await res.json();
   return data.choices?.[0]?.message?.content ?? "";
+}
+
+export type ToolCall = { name: string; args: Record<string, unknown> };
+
+type ToolCallAccumulator = { name: string; args: string };
+
+function parseArguments(raw: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(raw || "{}");
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+// Ask the model which actions the message calls for.
+//
+// Providers disagree about framing here: this one answers with SSE whenever
+// `tools` is present, even with stream:false, and arguments arrive split
+// across chunks. So handle both shapes -- accumulate deltas if it streams,
+// read choices[0].message if it does not.
+export async function requestToolCalls(
+  messages: ChatMessage[],
+  tools: unknown[]
+): Promise<{ toolCalls: ToolCall[]; text: string }> {
+  const res = await requestCompletion(messages, false, { tools, tool_choice: "auto" });
+  const body = await res.text();
+
+  if (!body.trimStart().startsWith("data:")) {
+    const data = JSON.parse(body);
+    const message = data.choices?.[0]?.message ?? {};
+    const calls = (message.tool_calls ?? []) as {
+      function?: { name?: string; arguments?: string };
+    }[];
+    return {
+      toolCalls: calls
+        .filter((c) => c.function?.name)
+        .map((c) => ({
+          name: c.function!.name!,
+          args: parseArguments(c.function!.arguments ?? ""),
+        })),
+      text: typeof message.content === "string" ? message.content : "",
+    };
+  }
+
+  const slots = new Map<number, ToolCallAccumulator>();
+  let text = "";
+
+  for (const line of body.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) continue;
+    const payload = trimmed.slice(5).trim();
+    if (!payload || payload === "[DONE]") continue;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(payload);
+    } catch {
+      continue;
+    }
+
+    const delta = parsed.choices?.[0]?.delta ?? {};
+    if (typeof delta.content === "string") text += delta.content;
+
+    for (const call of delta.tool_calls ?? []) {
+      const index = typeof call.index === "number" ? call.index : 0;
+      const slot = slots.get(index) ?? { name: "", args: "" };
+      if (call.function?.name) slot.name = call.function.name;
+      if (call.function?.arguments) slot.args += call.function.arguments;
+      slots.set(index, slot);
+    }
+  }
+
+  return {
+    toolCalls: [...slots.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([, slot]) => slot)
+      .filter((slot) => slot.name)
+      .map((slot) => ({ name: slot.name, args: parseArguments(slot.args) })),
+    text,
+  };
 }

@@ -3,17 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AccountSummary, Bill, Category } from "@/lib/types";
+import { daysUntilDue } from "@/lib/due";
 import { formatMoney } from "@/lib/format";
 import { getCurrencySymbol } from "@/lib/currency";
 import AppHeader from "@/components/AppHeader";
 import PageShell from "@/components/PageShell";
 
-function daysUntilDue(dueDayOfMonth: number): number {
-  const now = new Date();
-  const due = new Date(now.getFullYear(), now.getMonth(), dueDayOfMonth);
-  if (due < now) due.setMonth(due.getMonth() + 1);
-  return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
+
 
 function paidThisCycle(lastPaidAt: string | null): boolean {
   if (!lastPaidAt) return false;
@@ -46,7 +42,7 @@ export default function BillsClient({ currency }: { currency: string }) {
     fetch("/api/categories").then((r) => r.json()).then((d) => setCategories(d.categories ?? []));
   }, []);
 
-  const sortedBills = (bills ?? []).slice().sort((a, b) => daysUntilDue(a.dueDayOfMonth) - daysUntilDue(b.dueDayOfMonth));
+  const sortedBills = (bills ?? []).slice().sort((a, b) => (daysUntilDue(a) ?? 9999) - (daysUntilDue(b) ?? 9999));
 
   async function addBill(e: React.FormEvent) {
     e.preventDefault();
@@ -95,7 +91,7 @@ export default function BillsClient({ currency }: { currency: string }) {
       ) : (
         sortedBills.map((bill) => {
           const paid = paidThisCycle(bill.lastPaidAt);
-          const days = daysUntilDue(bill.dueDayOfMonth);
+          const days = daysUntilDue(bill) ?? 0;
           return (
             <div
               key={bill.id}

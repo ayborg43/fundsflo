@@ -12,17 +12,17 @@ test.describe("logging money from the chat", () => {
 
     await sendMessage(page, "spent 12 on lunch");
 
-    const card = page.getByTestId("draft-card");
+    const card = page.getByTestId("action-card");
     await expect(card).toBeVisible();
-    await expect(page.getByTestId("draft-amount")).toHaveValue("12");
-    await expect(page.getByTestId("draft-description")).toHaveValue("lunch");
+    await expect(page.getByTestId("field-amount")).toHaveValue("12");
+    await expect(page.getByTestId("field-description")).toHaveValue("lunch");
     // Single account, so it should already be selected rather than asking.
-    await expect(page.getByTestId("draft-account")).toHaveValue(accountId);
+    await expect(page.getByTestId("field-accountId")).toHaveValue(accountId);
 
     // Nothing committed yet.
     expect(await balanceOf(page.request, accountId)).toBe(0);
 
-    await page.getByTestId("draft-save-btn").click();
+    await page.getByTestId("action-save-btn").click();
 
     await expect(card).toBeHidden();
     await expect(page.getByTestId("chat-msg-assistant").last()).toContainText("Logged $12");
@@ -35,10 +35,10 @@ test.describe("logging money from the chat", () => {
     await page.goto("/");
 
     await sendMessage(page, "spent 30 on games");
-    await expect(page.getByTestId("draft-card")).toBeVisible();
-    await page.getByTestId("draft-cancel-btn").click();
+    await expect(page.getByTestId("action-card")).toBeVisible();
+    await page.getByTestId("action-cancel-btn").click();
 
-    await expect(page.getByTestId("draft-card")).toBeHidden();
+    await expect(page.getByTestId("action-card")).toBeHidden();
     // The wording is handed back for editing rather than lost.
     await expect(page.getByTestId("chat-input")).toHaveValue("spent 30 on games");
     expect(await balanceOf(page.request, accountId)).toBe(0);
@@ -54,10 +54,10 @@ test.describe("logging money from the chat", () => {
     await page.goto("/");
 
     await sendMessage(page, "spent 12 on lunch");
-    await page.getByTestId("draft-amount").fill("15.50");
-    await page.getByTestId("draft-description").fill("big lunch");
-    await page.getByTestId("draft-category").selectOption(categoryId);
-    await page.getByTestId("draft-save-btn").click();
+    await page.getByTestId("field-amount").fill("15.50");
+    await page.getByTestId("field-description").fill("big lunch");
+    await page.getByTestId("field-categoryId").selectOption(categoryId);
+    await page.getByTestId("action-save-btn").click();
 
     await expect(page.getByTestId("chat-msg-assistant").last()).toContainText("$15.5");
     expect(await balanceOf(page.request, accountId)).toBe(-15.5);
@@ -74,8 +74,8 @@ test.describe("logging money from the chat", () => {
     await sendMessage(page, "spent 20 on books");
 
     // Ambiguous, so the card must not pick for the user.
-    await expect(page.getByTestId("draft-account")).toHaveValue("");
-    await expect(page.getByTestId("draft-save-btn")).toBeDisabled();
+    await expect(page.getByTestId("field-accountId")).toHaveValue("");
+    await expect(page.getByTestId("action-save-btn")).toBeDisabled();
   });
 
   test("uses the default account set in settings", async ({ page }) => {
@@ -89,7 +89,7 @@ test.describe("logging money from the chat", () => {
     await page.goto("/");
 
     await sendMessage(page, "spent 20 on books");
-    await expect(page.getByTestId("draft-account")).toHaveValue(savingsId);
+    await expect(page.getByTestId("field-accountId")).toHaveValue(savingsId);
   });
 
   test("backdates an entry and can undo it", async ({ page }) => {
@@ -101,12 +101,12 @@ test.describe("logging money from the chat", () => {
 
     const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
     // The date is chips now, with the native picker only behind "Another day".
-    await expect(page.getByTestId("draft-when-yesterday")).toHaveAttribute(
+    await expect(page.getByTestId("field-date-yesterday")).toHaveAttribute(
       "aria-pressed",
       "true"
     );
 
-    await page.getByTestId("draft-save-btn").click();
+    await page.getByTestId("action-save-btn").click();
     await expect(page.getByTestId("chat-msg-assistant").last()).toContainText(yesterday);
     expect(await balanceOf(page.request, accountId)).toBe(-15);
 

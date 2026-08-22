@@ -6,6 +6,7 @@ import { CURRENCIES } from "@/lib/currency";
 import type { AccountSummary } from "@/lib/types";
 import AppHeader from "@/components/AppHeader";
 import PageShell from "@/components/PageShell";
+import ReminderSettings from "@/components/ReminderSettings";
 
 export default function SettingsForm({
   email,
@@ -181,6 +182,8 @@ export default function SettingsForm({
             {accountError}
           </p>
         )}
+
+        <ReminderSettings />
 
         <h2 className="font-display text-xl text-navy mb-3 mt-6">Data</h2>
         <div className="flex flex-col gap-3">

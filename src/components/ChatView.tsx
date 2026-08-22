@@ -5,20 +5,27 @@ import { useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import Confetti, { makeConfettiPieces } from "@/components/Confetti";
 import Icon from "@/components/Icon";
-import TransactionDraftCard from "@/components/TransactionDraftCard";
-import CategoryDraftCard from "@/components/CategoryDraftCard";
+import ActionCard from "@/components/ActionCard";
 import { formatMoney } from "@/lib/format";
-import type { AccountSummary, Category, CategoryDraft, TransactionDraft } from "@/lib/types";
+import type { AccountSummary, Category } from "@/lib/types";
 
 type Message = { id: string; role: "user" | "assistant"; content: string };
 
-// Something the AI parsed but nobody has confirmed yet. `userText` is held
-// here rather than saved server-side: the message only becomes history once
-// the draft is committed, so cancelling leaves no trace in the chat or in the
-// context later answers are built from.
-type Pending =
-  | { kind: "transaction"; userText: string; draft: TransactionDraft }
-  | { kind: "category"; userText: string; draft: CategoryDraft };
+type Proposal = { action: string; values: Record<string, unknown> };
+
+// Actions the AI proposed but nobody has confirmed yet. One message can ask
+// for several ("switch me to naira and add my netflix bill"), so they queue and
+// are confirmed one card at a time.
+//
+// `userText` is held here rather than saved server-side: the message only
+// becomes history once something is committed, so cancelling everything leaves
+// no trace in the chat or in the context later answers are built from.
+type Pending = {
+  userText: string;
+  proposals: Proposal[];
+  index: number;
+  savedAny: boolean;
+};
 
 const OPENERS = ["Spent 12 on lunch", "Made 50 from chores", "Review my spending"];
 
@@ -125,8 +132,13 @@ export default function ChatView({ email, currency }: { email: string; currency:
       if (res.headers.get("content-type")?.includes("application/json")) {
         const data = await res.json().catch(() => null);
         if (!res.ok) throw new Error(data?.error ?? "Something went wrong");
-        if (data?.kind === "transaction" || data?.kind === "category") {
-          setPending({ ...data, userText: data.userText ?? content });
+        if (data?.kind === "proposals" && Array.isArray(data.proposals) && data.proposals.length) {
+          setPending({
+            userText: data.userText ?? content,
+            proposals: data.proposals,
+            index: 0,
+            savedAny: false,
+          });
           return;
         }
         throw new Error(data?.error ?? "Something went wrong");
@@ -159,30 +171,47 @@ export default function ChatView({ email, currency }: { email: string; currency:
     }
   }
 
-  async function saveDraft() {
+  async function confirmAction() {
     if (!pending) return;
+    const current = pending.proposals[pending.index];
     setSavingDraft(true);
     setDraftError(null);
     try {
-      const endpoint = pending.kind === "transaction" ? "/api/ai/log" : "/api/ai/category";
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/ai/act", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...pending.draft, userText: pending.userText }),
+        body: JSON.stringify({
+          action: current.action,
+          values: current.values,
+          // The message is filed once, alongside whichever action lands first.
+          userText: pending.savedAny ? "" : pending.userText,
+        }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? "Could not save that");
 
-      appendTurn(pending.userText, data.confirmation);
+      setMessages((prev) => [
+        ...prev,
+        ...(pending.savedAny
+          ? []
+          : [{ id: nextId("user"), role: "user" as const, content: pending.userText }]),
+        { id: nextId("assistant"), role: "assistant" as const, content: data.confirmation },
+      ]);
+
       if (data.accounts) setAccounts(data.accounts);
       if (data.category) setCategories((prev) => [...prev, data.category]);
+      if (data.deletedCategoryId) {
+        setCategories((prev) => prev.filter((c) => c.id !== data.deletedCategoryId));
+      }
+      if (data.currency) router.refresh();
       if (data.transactionId && data.accountId) {
         setLastLog({ transactionId: data.transactionId, accountId: data.accountId });
       }
-      if (pending.kind === "transaction" && pending.draft.type === "make") {
+      if (current.action === "log_transaction" && current.values.type === "make") {
         setConfetti(makeConfettiPieces());
       }
-      setPending(null);
+
+      advanceQueue(true);
     } catch (err) {
       setDraftError(err instanceof Error ? err.message : "Could not save that");
     } finally {
@@ -190,12 +219,24 @@ export default function ChatView({ email, currency }: { email: string; currency:
     }
   }
 
-  function cancelDraft() {
-    // Put the words back in the box so a wrong reading can be rephrased
-    // instead of retyped.
-    setInput(pending?.userText ?? "");
-    setPending(null);
+  function advanceQueue(saved: boolean) {
+    setPending((prev) => {
+      if (!prev) return null;
+      const savedAny = prev.savedAny || saved;
+      const next = prev.index + 1;
+      if (next >= prev.proposals.length) {
+        // Nothing at all was confirmed: hand the wording back so a wrong
+        // reading can be rephrased instead of retyped.
+        if (!savedAny) setInput(prev.userText);
+        return null;
+      }
+      return { ...prev, index: next, savedAny };
+    });
     setDraftError(null);
+  }
+
+  function skipAction() {
+    advanceQueue(false);
     inputRef.current?.focus();
   }
 
@@ -204,7 +245,7 @@ export default function ChatView({ email, currency }: { email: string; currency:
     setBusy("undo");
     setError(null);
     try {
-      const res = await fetch("/api/ai/log", {
+      const res = await fetch("/api/ai/act", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(lastLog),
@@ -254,6 +295,7 @@ export default function ChatView({ email, currency }: { email: string; currency:
 
   // Debt balances are stored negative, so a plain sum already nets them off.
   const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0);
+  const today = new Date().toISOString().slice(0, 10);
   const inTheRed = netWorth < 0;
   const isEmpty = messages.length === 0 && !pending && !busy;
 
@@ -356,29 +398,35 @@ export default function ChatView({ email, currency }: { email: string; currency:
                         {pending.userText}
                       </div>
                     </div>
+
+                    {pending.proposals.length > 1 && (
+                      <p className="text-center text-xs text-ink-2" data-testid="queue-progress">
+                        {pending.index + 1} of {pending.proposals.length}
+                      </p>
+                    )}
+
                     <div className="flex justify-start">
-                      {pending.kind === "transaction" ? (
-                        <TransactionDraftCard
-                          draft={pending.draft}
-                          currency={currency}
-                          accounts={accounts}
-                          categories={categories}
-                          saving={savingDraft}
-                          error={draftError}
-                          onChange={(next) => setPending({ ...pending, draft: next })}
-                          onSave={saveDraft}
-                          onCancel={cancelDraft}
-                        />
-                      ) : (
-                        <CategoryDraftCard
-                          draft={pending.draft}
-                          saving={savingDraft}
-                          error={draftError}
-                          onChange={(next) => setPending({ ...pending, draft: next })}
-                          onSave={saveDraft}
-                          onCancel={cancelDraft}
-                        />
-                      )}
+                      <ActionCard
+                        key={pending.index}
+                        action={pending.proposals[pending.index].action}
+                        values={pending.proposals[pending.index].values}
+                        context={{ accounts, categories, currency, today }}
+                        saving={savingDraft}
+                        error={draftError}
+                        onChange={(next) =>
+                          setPending((prev) => {
+                            if (!prev) return prev;
+                            const proposals = prev.proposals.slice();
+                            proposals[prev.index] = {
+                              ...proposals[prev.index],
+                              values: next,
+                            };
+                            return { ...prev, proposals };
+                          })
+                        }
+                        onSave={confirmAction}
+                        onCancel={skipAction}
+                      />
                     </div>
                   </div>
                 )}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/auth";
-import { listBudgets, createBudget, deleteBudget } from "@/lib/budgets";
+import { listBudgets, upsertBudget, deleteBudget } from "@/lib/budgets";
+import type { BudgetPeriod } from "@/lib/types";
 
 export async function GET() {
   const userId = await getSessionUserId();
@@ -19,13 +20,18 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => null);
   const categoryId = typeof body?.categoryId === "string" ? body.categoryId : "";
-  const monthlyLimit = typeof body?.monthlyLimit === "number" ? body.monthlyLimit : 0;
+  // `monthlyLimit` is still accepted so the existing screen keeps working now
+  // that budgets can also be daily or weekly.
+  const rawLimit = body?.limitAmount ?? body?.monthlyLimit;
+  const limitAmount = typeof rawLimit === "number" ? rawLimit : 0;
+  const period: BudgetPeriod =
+    body?.period === "day" || body?.period === "week" ? body.period : "month";
 
-  if (!categoryId || !(monthlyLimit > 0)) {
+  if (!categoryId || !(limitAmount > 0)) {
     return NextResponse.json({ error: "Invalid budget" }, { status: 400 });
   }
 
-  const budget = await createBudget(userId, { categoryId, monthlyLimit });
+  const budget = await upsertBudget(userId, { categoryId, limitAmount, period });
   return NextResponse.json({ budget });
 }
 
