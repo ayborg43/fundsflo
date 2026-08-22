@@ -2,20 +2,29 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { AccountSummary, Bill, Category } from "@/lib/types";
+import type { AccountSummary, Bill, BillRecurrence, Category } from "@/lib/types";
 import { daysUntilDue } from "@/lib/due";
 import { formatMoney } from "@/lib/format";
 import { getCurrencySymbol } from "@/lib/currency";
 import AppHeader from "@/components/AppHeader";
 import PageShell from "@/components/PageShell";
 
-
-
-function paidThisCycle(lastPaidAt: string | null): boolean {
-  if (!lastPaidAt) return false;
-  const paid = new Date(lastPaidAt);
+// A monthly bill is "paid" for the current cycle; a one-off is paid forever
+// once it's paid, since there is no next cycle for it to reset on.
+function isPaid(bill: Bill): boolean {
+  if (!bill.lastPaidAt) return false;
+  if (bill.recurrence === "once") return true;
+  const paid = new Date(bill.lastPaidAt);
   const now = new Date();
   return paid.getMonth() === now.getMonth() && paid.getFullYear() === now.getFullYear();
+}
+
+function dueLabel(bill: Bill): string {
+  const days = daysUntilDue(bill);
+  if (days === null) return "no date set";
+  if (days < 0) return `Overdue by ${-days}d`;
+  if (days === 0) return "Due today";
+  return `Due in ${days}d`;
 }
 
 export default function BillsClient({ currency }: { currency: string }) {
@@ -32,7 +41,10 @@ export default function BillsClient({ currency }: { currency: string }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
+  const [recurrence, setRecurrence] = useState<BillRecurrence>("monthly");
   const [dueDay, setDueDay] = useState("1");
+  const [dueDate, setDueDate] = useState("");
+  const [remindDaysBefore, setRemindDaysBefore] = useState("");
   const [accountId, setAccountId] = useState("");
   const [categoryId, setCategoryId] = useState("");
 
@@ -47,15 +59,25 @@ export default function BillsClient({ currency }: { currency: string }) {
   async function addBill(e: React.FormEvent) {
     e.preventDefault();
     const amt = parseFloat(amount);
-    const day = parseInt(dueDay, 10);
-    if (!name.trim() || !(amt > 0) || day < 1 || day > 28) return;
+    if (!name.trim() || !(amt > 0)) return;
+    if (recurrence === "monthly") {
+      const day = parseInt(dueDay, 10);
+      if (day < 1 || day > 28) return;
+    } else if (!dueDate) {
+      return;
+    }
+    const remind = parseInt(remindDaysBefore, 10);
+
     const res = await fetch("/api/bills", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: name.trim(),
         amount: amt,
-        dueDayOfMonth: day,
+        recurrence,
+        dueDayOfMonth: recurrence === "monthly" ? parseInt(dueDay, 10) : undefined,
+        dueDate: recurrence === "once" ? dueDate : undefined,
+        remindDaysBefore: Number.isFinite(remind) && remind > 0 ? remind : undefined,
         accountId: accountId || null,
         categoryId: categoryId || null,
       }),
@@ -65,6 +87,8 @@ export default function BillsClient({ currency }: { currency: string }) {
     setName("");
     setAmount("");
     setDueDay("1");
+    setDueDate("");
+    setRemindDaysBefore("");
   }
 
   async function deleteBill(id: string) {
@@ -86,12 +110,11 @@ export default function BillsClient({ currency }: { currency: string }) {
         <p className="font-display text-sm text-navy/60 text-center">Loading...</p>
       ) : sortedBills.length === 0 ? (
         <p className="font-display text-sm text-navy/60 text-center mb-4">
-          No recurring bills yet — add one below.
+          No bills yet — add one below.
         </p>
       ) : (
         sortedBills.map((bill) => {
-          const paid = paidThisCycle(bill.lastPaidAt);
-          const days = daysUntilDue(bill) ?? 0;
+          const paid = isPaid(bill);
           return (
             <div
               key={bill.id}
@@ -100,9 +123,38 @@ export default function BillsClient({ currency }: { currency: string }) {
               style={{ backgroundColor: paid ? "#e8ffd8" : "white" }}
             >
               <div className="flex-1 min-w-0">
-                <div className="font-display text-lg text-navy truncate">{bill.name}</div>
+                <div className="font-display text-lg text-navy flex items-center gap-1.5">
+                  {/* A text pill here overflowed on a phone once "Mark paid"
+                      and delete were also in the row -- an icon with a
+                      tooltip carries the same information in far less width,
+                      matching the reminder bell below. */}
+                  <span className="truncate min-w-0">{bill.name}</span>
+                  {bill.recurrence === "once" && (
+                    <span
+                      data-testid={`bill-once-${bill.id}`}
+                      title="One-time payment, not recurring"
+                      className="text-sm shrink-0"
+                    >
+                      📌
+                    </span>
+                  )}
+                  {!!bill.remindDaysBefore && (
+                    <span
+                      data-testid={`bill-reminder-${bill.id}`}
+                      title={`Reminds ${bill.remindDaysBefore} day${bill.remindDaysBefore === 1 ? "" : "s"} before`}
+                      className="text-sm shrink-0"
+                    >
+                      🔔
+                    </span>
+                  )}
+                </div>
                 <div className="font-display text-sm text-navy/70">
-                  {formatMoney(bill.amount, currency)} · {paid ? "Paid this month ✓" : `Due in ${days}d`}
+                  {formatMoney(bill.amount, currency)} ·{" "}
+                  {paid
+                    ? bill.recurrence === "once"
+                      ? "Paid ✓"
+                      : "Paid this month ✓"
+                    : dueLabel(bill)}
                 </div>
               </div>
               {!paid && (
@@ -135,6 +187,31 @@ export default function BillsClient({ currency }: { currency: string }) {
       >
         <h2 className="font-display text-xl text-navy mb-3">ADD A BILL</h2>
         <form className="space-y-3" onSubmit={addBill}>
+          <div className="flex gap-2">
+            {(
+              [
+                ["monthly", "Every month"],
+                ["once", "Just once"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                data-testid={`bill-recurrence-${value}`}
+                onClick={() => setRecurrence(value)}
+                aria-pressed={recurrence === value}
+                className="font-display flex-1 rounded-2xl border-3 border-navy py-2 text-sm uppercase tracking-wide"
+                style={{
+                  borderWidth: 3,
+                  backgroundColor: recurrence === value ? "var(--gus-navy)" : "white",
+                  color: recurrence === value ? "#fff" : "var(--gus-navy)",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           <input
             data-testid="bill-name-input"
             value={name}
@@ -162,18 +239,39 @@ export default function BillsClient({ currency }: { currency: string }) {
                 style={{ boxShadow: "var(--gus-navy) 0px 4px 0px 0px" }}
               />
             </div>
-            <input
-              data-testid="bill-due-day-input"
-              type="number"
-              min={1}
-              max={28}
-              value={dueDay}
-              onChange={(e) => setDueDay(e.target.value)}
-              placeholder="Due day"
-              className="w-24 font-display text-lg text-navy rounded-2xl border-4 border-navy px-3 py-3 outline-none bg-white text-center"
-              style={{ boxShadow: "var(--gus-navy) 0px 4px 0px 0px" }}
-            />
+            {recurrence === "monthly" ? (
+              <input
+                data-testid="bill-due-day-input"
+                type="number"
+                min={1}
+                max={28}
+                value={dueDay}
+                onChange={(e) => setDueDay(e.target.value)}
+                placeholder="Due day"
+                className="w-24 font-display text-lg text-navy rounded-2xl border-4 border-navy px-3 py-3 outline-none bg-white text-center"
+                style={{ boxShadow: "var(--gus-navy) 0px 4px 0px 0px" }}
+              />
+            ) : (
+              <input
+                data-testid="bill-due-date-input"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="chunky-field chunky-field--date w-40 text-sm"
+              />
+            )}
           </div>
+          <input
+            data-testid="bill-remind-input"
+            type="number"
+            min={0}
+            max={30}
+            value={remindDaysBefore}
+            onChange={(e) => setRemindDaysBefore(e.target.value)}
+            placeholder="Remind me this many days before (optional)"
+            className="w-full font-display text-base text-navy rounded-2xl border-4 border-navy px-4 py-3 outline-none bg-white"
+            style={{ boxShadow: "var(--gus-navy) 0px 4px 0px 0px" }}
+          />
           {accounts.length > 0 && (
             <select
               data-testid="bill-account-select"
@@ -209,7 +307,7 @@ export default function BillsClient({ currency }: { currency: string }) {
           <button
             data-testid="add-bill-btn"
             type="submit"
-            disabled={!name.trim() || !amount}
+            disabled={!name.trim() || !amount || (recurrence === "once" && !dueDate)}
             className="chunky-btn w-full py-3 text-lg text-white"
             style={{ backgroundColor: "var(--gus-pink)" }}
           >

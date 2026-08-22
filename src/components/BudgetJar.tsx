@@ -1,6 +1,12 @@
 import type { Budget, Category } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 
+const PERIOD_WORD: Record<Budget["period"], string> = {
+  day: "day",
+  week: "week",
+  month: "month",
+};
+
 export default function BudgetJar({
   budget,
   category,
@@ -25,14 +31,25 @@ export default function BudgetJar({
         <span className="font-display text-lg text-navy">
           {category ? `${category.emoji} ${category.name}` : "Unknown category"}
         </span>
-        <button
-          data-testid={`delete-budget-${budget.id}`}
-          aria-label="Delete budget"
-          onClick={() => onDelete(budget.id)}
-          className="w-7 h-7 rounded-full border-2 border-navy flex items-center justify-center text-xs"
-        >
-          ✕
-        </button>
+        <div className="flex items-center gap-2">
+          {/* A day/week/month jar look identical without this -- the numbers
+              mean different things and the period has to be visible, not
+              just implied by the limit. */}
+          <span
+            data-testid={`budget-period-${budget.id}`}
+            className="font-display text-xs uppercase tracking-[0.08em] text-ink-2 rounded-full border-2 border-navy/25 px-2 py-0.5"
+          >
+            per {PERIOD_WORD[budget.period]}
+          </span>
+          <button
+            data-testid={`delete-budget-${budget.id}`}
+            aria-label="Delete budget"
+            onClick={() => onDelete(budget.id)}
+            className="w-7 h-7 rounded-full border-2 border-navy flex items-center justify-center text-xs"
+          >
+            ✕
+          </button>
+        </div>
       </div>
       <div
         className="relative h-6 rounded-full border-2 border-navy overflow-hidden"

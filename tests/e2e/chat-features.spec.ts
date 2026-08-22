@@ -213,3 +213,41 @@ test.describe("what the model is actually sent", () => {
     expect(stats.maxAnswerMessageCount).toBeLessThanOrEqual(31);
   });
 });
+
+test.describe("immediate feedback while waiting", () => {
+  test("the message echoes and a typing indicator shows before the answer arrives", async ({
+    page,
+  }) => {
+    await signUp(page);
+    await createAccount(page.request, "Checking");
+    await page.goto("/");
+
+    await page.getByTestId("chat-input").fill("how am I doing?");
+    const responsePromise = page.waitForResponse((r) => r.url().includes("/api/ai/chat"));
+    await page.getByTestId("chat-send-btn").click();
+
+    // Before the round trip resolves, the words are already on screen and
+    // something visibly indicates work is happening -- not a blank pane.
+    await expect(page.getByTestId("chat-msg-echo")).toHaveText("how am I doing?");
+    await expect(page.getByTestId("chat-busy")).toBeVisible();
+
+    await responsePromise;
+    await expect(page.getByTestId("chat-msg-echo")).toBeHidden();
+    await expect(page.getByTestId("chat-msg-assistant").last()).toContainText("Stub answer");
+  });
+
+  test("the echo hands off to the confirmation card without duplicating the message", async ({
+    page,
+  }) => {
+    await signUp(page);
+    await createAccount(page.request, "Checking");
+    await page.goto("/");
+
+    await page.getByTestId("chat-input").fill("spent 12 on lunch");
+    await page.getByTestId("chat-send-btn").click();
+
+    await expect(page.getByTestId("action-card")).toBeVisible();
+    // Exactly one bubble carries the message -- from the card, not a leftover echo.
+    await expect(page.getByText("spent 12 on lunch")).toHaveCount(1);
+  });
+});

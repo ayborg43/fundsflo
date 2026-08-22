@@ -54,6 +54,12 @@ export default function ChatView({ email, currency }: { email: string; currency:
   // The entry most recently logged from the chat, kept only until the next
   // action, so Undo always refers to something unambiguous.
   const [lastLog, setLastLog] = useState<{ transactionId: string; accountId: string } | null>(null);
+  // What was just sent, shown the instant Send is pressed. Without this the
+  // message vanished from the input and nothing appeared until the whole
+  // round trip resolved -- including the invisible tool-call pass -- so the
+  // app looked hung. Cleared the moment a real result lands, whichever shape
+  // it turns out to be.
+  const [echo, setEcho] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pendingRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +93,7 @@ export default function ChatView({ email, currency }: { email: string; currency:
       return;
     }
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [messages, pending, busy]);
+  }, [messages, pending, busy, echo, sending]);
 
   useEffect(() => {
     if (confetti.length === 0) return;
@@ -117,6 +123,7 @@ export default function ChatView({ email, currency }: { email: string; currency:
     setInput("");
     setError(null);
     setLastLog(null);
+    setEcho(content);
     setSending(true);
 
     const assistantId = nextId("assistant");
@@ -134,6 +141,10 @@ export default function ChatView({ email, currency }: { email: string; currency:
         const data = await res.json().catch(() => null);
         if (!res.ok) throw new Error(data?.error ?? "Something went wrong");
         if (data?.kind === "proposals" && Array.isArray(data.proposals) && data.proposals.length) {
+          // The proposal card renders its own copy of the user's words, so
+          // hand off from the echo to it in one state update -- no flash of
+          // the message disappearing and reappearing.
+          setEcho(null);
           setPending({
             userText: data.userText ?? content,
             proposals: data.proposals,
@@ -147,6 +158,7 @@ export default function ChatView({ email, currency }: { email: string; currency:
 
       if (!res.ok || !res.body) throw new Error("Something went wrong");
 
+      setEcho(null);
       setMessages((prev) => [
         ...prev,
         { id: nextId("user"), role: "user", content },
@@ -166,6 +178,7 @@ export default function ChatView({ email, currency }: { email: string; currency:
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setInput(content);
+      setEcho(null);
       setMessages((prev) => prev.filter((m) => m.id !== assistantId));
     } finally {
       setSending(false);
@@ -298,7 +311,7 @@ export default function ChatView({ email, currency }: { email: string; currency:
   const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0);
   const today = new Date().toISOString().slice(0, 10);
   const inTheRed = netWorth < 0;
-  const isEmpty = messages.length === 0 && !pending && !busy;
+  const isEmpty = messages.length === 0 && !pending && !busy && !echo;
 
   return (
     // Fixed to the viewport: the page itself must never scroll here, or the
@@ -442,7 +455,19 @@ export default function ChatView({ email, currency }: { email: string; currency:
                   </div>
                 )}
 
-                {busy && (
+                {echo && (
+                  <div className="flex justify-end">
+                    <div
+                      data-testid="chat-msg-echo"
+                      className="max-w-[85%] whitespace-pre-wrap rounded-2xl border-3 border-navy px-4 py-2.5 leading-relaxed"
+                      style={{ backgroundColor: "var(--gus-cyan)", borderWidth: 3 }}
+                    >
+                      {echo}
+                    </div>
+                  </div>
+                )}
+
+                {(sending || busy) && !pending && (
                   <div className="flex justify-start">
                     <div
                       data-testid="chat-busy"
@@ -453,7 +478,11 @@ export default function ChatView({ email, currency }: { email: string; currency:
                       <span className="typing-dot" />
                       <span className="typing-dot" />
                       <span className="ml-1 text-sm">
-                        {busy === "undo" ? "Putting that back" : "Reading your statement"}
+                        {busy === "undo"
+                          ? "Putting that back"
+                          : busy === "upload"
+                            ? "Reading your statement"
+                            : "Thinking"}
                       </span>
                     </div>
                   </div>

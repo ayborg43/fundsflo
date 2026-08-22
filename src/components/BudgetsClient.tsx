@@ -2,11 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { Budget, Category } from "@/lib/types";
+import type { Budget, BudgetPeriod, Category } from "@/lib/types";
 import { getCurrencySymbol } from "@/lib/currency";
 import BudgetJar from "@/components/BudgetJar";
 import AppHeader from "@/components/AppHeader";
 import PageShell from "@/components/PageShell";
+
+const PERIODS: { value: BudgetPeriod; label: string }[] = [
+  { value: "day", label: "Day" },
+  { value: "week", label: "Week" },
+  { value: "month", label: "Month" },
+];
 
 export default function BudgetsClient({ currency }: { currency: string }) {
   const router = useRouter();
@@ -20,12 +26,17 @@ export default function BudgetsClient({ currency }: { currency: string }) {
   const [budgets, setBudgets] = useState<Budget[] | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState("");
-  const [monthlyLimit, setMonthlyLimit] = useState("");
+  const [limitAmount, setLimitAmount] = useState("");
+  const [period, setPeriod] = useState<BudgetPeriod>("month");
 
-  useEffect(() => {
+  function refreshBudgets() {
     fetch("/api/budgets")
       .then((res) => res.json())
       .then((data) => setBudgets(data.budgets ?? []));
+  }
+
+  useEffect(() => {
+    refreshBudgets();
     fetch("/api/categories")
       .then((res) => res.json())
       .then((data) => setCategories(data.categories ?? []));
@@ -35,17 +46,20 @@ export default function BudgetsClient({ currency }: { currency: string }) {
 
   async function addBudget(e: React.FormEvent) {
     e.preventDefault();
-    const limit = parseFloat(monthlyLimit);
+    const limit = parseFloat(limitAmount);
     if (!categoryId || !(limit > 0)) return;
-    const res = await fetch("/api/budgets", {
+    await fetch("/api/budgets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ categoryId, monthlyLimit: limit }),
+      body: JSON.stringify({ categoryId, limitAmount: limit, period }),
     });
-    const data = await res.json();
-    setBudgets((prev) => [...(prev ?? []), data.budget]);
+    // Setting a budget for a category that already has one updates it rather
+    // than adding a second limit, so refetch instead of appending: the real
+    // spend-so-far for the (possibly new) period only exists server-side.
+    refreshBudgets();
     setCategoryId("");
-    setMonthlyLimit("");
+    setLimitAmount("");
+    setPeriod("month");
   }
 
   async function deleteBudget(id: string) {
@@ -61,7 +75,7 @@ export default function BudgetsClient({ currency }: { currency: string }) {
         <p className="font-display text-sm text-navy/60 text-center">Loading...</p>
       ) : budgets.length === 0 ? (
         <p className="font-display text-sm text-navy/60 text-center mb-4">
-          No budgets yet — set a monthly limit for a category below.
+          No budgets yet — set a limit for a category below.
         </p>
       ) : (
         budgets.map((b) => (
@@ -101,6 +115,27 @@ export default function BudgetsClient({ currency }: { currency: string }) {
                 </option>
               ))}
             </select>
+
+            <div className="flex gap-2">
+              {PERIODS.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  data-testid={`period-option-${p.value}`}
+                  onClick={() => setPeriod(p.value)}
+                  aria-pressed={period === p.value}
+                  className="font-display flex-1 rounded-2xl border-3 border-navy py-2 text-sm uppercase tracking-wide"
+                  style={{
+                    borderWidth: 3,
+                    backgroundColor: period === p.value ? "var(--gus-navy)" : "white",
+                    color: period === p.value ? "#fff" : "var(--gus-navy)",
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 font-display text-xl text-navy pointer-events-none">
                 {getCurrencySymbol(currency)}
@@ -111,9 +146,9 @@ export default function BudgetsClient({ currency }: { currency: string }) {
                 type="number"
                 min={0}
                 step="0.01"
-                value={monthlyLimit}
-                onChange={(e) => setMonthlyLimit(e.target.value)}
-                placeholder="Monthly limit"
+                value={limitAmount}
+                onChange={(e) => setLimitAmount(e.target.value)}
+                placeholder={`Limit per ${period}`}
                 className="w-full font-display text-lg text-navy rounded-2xl border-4 border-navy pl-9 pr-4 py-3 outline-none bg-white"
                 style={{ boxShadow: "var(--gus-navy) 0px 4px 0px 0px" }}
               />
@@ -121,7 +156,7 @@ export default function BudgetsClient({ currency }: { currency: string }) {
             <button
               data-testid="add-budget-btn"
               type="submit"
-              disabled={!categoryId || !monthlyLimit}
+              disabled={!categoryId || !limitAmount}
               className="chunky-btn w-full py-3 text-lg text-white"
               style={{ backgroundColor: "var(--gus-pink)" }}
             >
