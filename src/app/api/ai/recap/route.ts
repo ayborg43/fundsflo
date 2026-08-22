@@ -3,6 +3,7 @@ import { getSessionUserId } from "@/lib/auth";
 import { findUserById } from "@/lib/users";
 import { generateInsight, RECAP_REQUEST } from "@/lib/ai/insights";
 import { friendlyAIError } from "@/lib/ai/errors";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST() {
   const userId = await getSessionUserId();
@@ -13,6 +14,9 @@ export async function POST() {
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  const limited = checkRateLimit(userId, "insight");
+  if (!limited.ok) return rateLimitResponse(limited.retryAfterSeconds);
 
   try {
     const text = await generateInsight({

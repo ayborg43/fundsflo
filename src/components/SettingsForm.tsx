@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { CURRENCIES } from "@/lib/currency";
 import type { AccountSummary } from "@/lib/types";
 import AppHeader from "@/components/AppHeader";
+import PageShell from "@/components/PageShell";
 
 export default function SettingsForm({
   email,
@@ -104,7 +105,7 @@ export default function SettingsForm({
   }
 
   return (
-    <div className="max-w-sm mx-auto px-4 sm:px-6 pt-10 sm:pt-16">
+    <PageShell>
       <AppHeader title="SETTINGS" email={email} onLogout={handleLogout} />
 
       <div
@@ -219,6 +220,6 @@ export default function SettingsForm({
           </p>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

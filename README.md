@@ -47,6 +47,12 @@ result cannot. The Insights screen keeps its dedicated recap/forecast endpoints.
 instruction to caveat a projection as a rough, directional estimate lives in the
 shared system prompt, so it applies wherever the question is asked.
 
+Debt accounts invert what the ledger's signs mean — paying a loan down is a
+"make", a new charge is a "spend" — so the confirmation card, the saved
+confirmation message and the classifier all take their wording from
+`src/lib/wording.ts`. Against a loan the toggle reads Paid off / Charged, and the
+balance line says what is owed rather than a negative number.
+
 When a message doesn't name an account, the transaction goes to the **default
 account** set in Settings; failing that, to the only account if there's just one;
 otherwise the card asks. A message that says *when* ("yesterday", "last Monday") is
@@ -69,6 +75,13 @@ Chat history is capped before it reaches the model (`getPromptMessages`): the ne
 30 messages, within a character budget. The UI still shows everything. Statement
 analyses run well over a thousand characters each, so an uncapped history would mean
 every later answer paying for every earlier upload.
+
+Every route that calls the model is throttled per user (`src/lib/rate-limit.ts`):
+20 chat messages a minute, 10 recap/forecast, 5 statement uploads per 5 minutes,
+each overridable by env. The window is in-process rather than in Postgres — this
+ships as one container, and the goal is to stop a stuck client running up a bill,
+not to enforce a billing quota. Run multiple replicas and the allowance multiplies
+by replica count.
 
 Upstream failures never reach the browser verbatim. `friendlyAIError` logs the
 provider payload server-side and returns a short message, because provider responses

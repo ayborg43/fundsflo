@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/format";
 import NetWorthTrend from "@/components/NetWorthTrend";
 import AIInsightsCard from "@/components/AIInsightsCard";
 import AppHeader from "@/components/AppHeader";
+import PageShell from "@/components/PageShell";
 
 export default function InsightsClient({ currency }: { currency: string }) {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function InsightsClient({ currency }: { currency: string }) {
   }, []);
 
   return (
-    <div className="max-w-sm mx-auto px-4 sm:px-6 pt-10 sm:pt-16">
+    <PageShell>
       <AppHeader title="INSIGHTS" onLogout={handleLogout} />
 
       {netWorth !== null && (
@@ -52,6 +53,6 @@ export default function InsightsClient({ currency }: { currency: string }) {
       <NetWorthTrend history={history} />
 
       <AIInsightsCard />
-    </div>
+    </PageShell>
   );
 }

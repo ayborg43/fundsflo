@@ -6,6 +6,7 @@ import type { AccountSummary, Bill, Category } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { getCurrencySymbol } from "@/lib/currency";
 import AppHeader from "@/components/AppHeader";
+import PageShell from "@/components/PageShell";
 
 function daysUntilDue(dueDayOfMonth: number): number {
   const now = new Date();
@@ -82,7 +83,7 @@ export default function BillsClient({ currency }: { currency: string }) {
   }
 
   return (
-    <div className="max-w-sm mx-auto px-4 sm:px-6 pt-10 sm:pt-16">
+    <PageShell>
       <AppHeader title="BILLS" onLogout={handleLogout} />
 
       {!bills ? (
@@ -220,6 +221,6 @@ export default function BillsClient({ currency }: { currency: string }) {
           </button>
         </form>
       </div>
-    </div>
+    </PageShell>
   );
 }

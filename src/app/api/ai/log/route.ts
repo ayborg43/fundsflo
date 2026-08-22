@@ -6,6 +6,7 @@ import { listCategories } from "@/lib/categories";
 import { addTransaction, deleteTransaction } from "@/lib/transactions";
 import { saveMessage } from "@/lib/ai/messages";
 import { formatMoney } from "@/lib/format";
+import { directionCopy, balanceSentence } from "@/lib/wording";
 
 // Commits a draft the user confirmed on the chat card. The draft that arrives
 // here is whatever is on the card at that moment, edits included, so nothing
@@ -81,13 +82,14 @@ export async function POST(request: NextRequest) {
     timestamp,
   });
 
-  const label = description || (type === "make" ? "money in" : "money out");
-  const verb = type === "make" ? "Added" : "Logged";
-  const emoji = type === "make" ? "🤑" : "💸";
+  // Debt accounts invert what make/spend mean, so the wording comes from the
+  // shared table rather than a local ternary.
+  const copy = directionCopy(account.type, type);
+  const label = description || copy.band.toLowerCase();
   const when = rawDate ? ` on ${rawDate}` : "";
   const confirmation =
-    `${verb} ${formatMoney(amount, user.currency)} for ${label} in ${account.name}${when}. ${emoji}\n` +
-    `${account.name} is now ${formatMoney(detail.balance, user.currency)}.`;
+    `${copy.verb} ${formatMoney(amount, user.currency)} for ${label} ${copy.preposition} ${account.name}${when}. ${copy.emoji}\n` +
+    balanceSentence(account.name, account.type, detail.balance, user.currency);
 
   // Only now does the turn become history -- the user's own words, then the
   // confirmation, so later answers can see what was logged and how.

@@ -110,6 +110,56 @@ test.describe("the rest of the chat surface", () => {
   });
 });
 
+test.describe("guard rails", () => {
+  test("a loan reads as paying down, not as spending", async ({ page }) => {
+    await signUp(page);
+    const loanId = await createAccount(page.request, "Bike Loan", "debt");
+    expect(
+      (await page.request.patch("/api/settings", { data: { defaultAccountId: loanId } })).ok()
+    ).toBeTruthy();
+    await page.goto("/");
+
+    await sendMessage(page, "spent 20 on bike loan");
+
+    // Against a debt account "spend" is a new charge and "make" pays it down;
+    // Made/Spent would read backwards.
+    await expect(page.getByTestId("draft-card")).toContainText("New charge");
+    await expect(page.getByTestId("draft-type-spend")).toContainText("Charged");
+    await expect(page.getByTestId("draft-type-make")).toContainText("Paid off");
+
+    await page.getByTestId("draft-save-btn").click();
+    // And the balance reads as an amount owed, not a negative number.
+    await expect(page.getByTestId("chat-msg-assistant").last()).toContainText("You owe");
+  });
+
+  test("statement uploads are throttled per user", async ({ page }) => {
+    await signUp(page);
+    await createAccount(page.request, "Checking");
+
+    const file = {
+      name: "statement.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from("Date,Description,Amount\n2026-08-01,COFFEE,-4.50\n"),
+    };
+
+    // The test stack allows two per window; the third must be refused rather
+    // than sent upstream.
+    for (let i = 0; i < 2; i += 1) {
+      const res = await page.request.post("/api/statements", {
+        multipart: { file, fromChat: "1" },
+      });
+      expect(res.ok()).toBeTruthy();
+    }
+
+    const blocked = await page.request.post("/api/statements", {
+      multipart: { file, fromChat: "1" },
+    });
+    expect(blocked.status()).toBe(429);
+    expect(blocked.headers()["retry-after"]).toBeTruthy();
+    expect((await blocked.json()).error).toContain("slow down");
+  });
+});
+
 test.describe("what the model is actually sent", () => {
   test("the prompt carries budgets and bills", async ({ page }) => {
     await signUp(page);

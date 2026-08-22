@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/format";
 import AppHeader from "@/components/AppHeader";
 import AccountCard from "@/components/AccountCard";
 import AddAccountForm from "@/components/AddAccountForm";
+import PageShell from "@/components/PageShell";
 
 export default function HomeClient({ email, currency }: { email: string; currency: string }) {
   const router = useRouter();
@@ -41,9 +42,9 @@ export default function HomeClient({ email, currency }: { email: string; currenc
 
   if (!accounts) {
     return (
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16 text-center">
-        <div className="font-display text-2xl text-navy">Loading...</div>
-      </div>
+      <PageShell className="text-center">
+        <div className="font-display text-2xl text-navy">Loading…</div>
+      </PageShell>
     );
   }
 
@@ -52,8 +53,9 @@ export default function HomeClient({ email, currency }: { email: string; currenc
   const totalNetWorth = accounts.reduce((sum, a) => sum + a.balance, 0);
 
   return (
-    <div data-testid="fundsflow-app" className="max-w-2xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7">
-      <AppHeader title="ACCOUNTS" email={email} onLogout={handleLogout} />
+    <PageShell>
+      <div data-testid="fundsflow-app">
+        <AppHeader title="ACCOUNTS" email={email} onLogout={handleLogout} />
 
       <div
         data-testid="net-worth-line"
@@ -90,7 +92,8 @@ export default function HomeClient({ email, currency }: { email: string; currenc
 
       <AddAccountForm currency={currency} onAdd={handleAddAccount} />
 
-      <div className="text-center font-display text-sm text-navy/60 mt-6">keep stacking 💰</div>
-    </div>
+        <div className="text-center font-display text-sm text-navy/60 mt-6">keep stacking 💰</div>
+      </div>
+    </PageShell>
   );
 }

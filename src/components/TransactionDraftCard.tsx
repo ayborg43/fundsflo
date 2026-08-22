@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import Icon from "@/components/Icon";
 import { formatMoney } from "@/lib/format";
+import { directionCopy } from "@/lib/wording";
 import type { AccountSummary, Category, TransactionDraft } from "@/lib/types";
 
 // The AI's reading of a message, shown for confirmation before anything is
@@ -37,6 +38,10 @@ export default function TransactionDraftCard({
 }) {
   const isMake = draft.type === "make";
   const canSave = !saving && draft.accountId !== null && draft.amount > 0;
+  // Wording follows the chosen account: against a loan, "make" is paying it
+  // down and "spend" is a new charge, so Made/Spent reads backwards.
+  const selectedType = accounts.find((a) => a.id === draft.accountId)?.type ?? null;
+  const copy = directionCopy(selectedType, draft.type);
   // A backdated entry can't be in the future, and an empty date means "now".
   const today = new Date().toISOString().slice(0, 10);
   // Derived from `today` by arithmetic rather than a second clock read, which
@@ -72,7 +77,7 @@ export default function TransactionDraftCard({
           className="font-display text-sm uppercase tracking-[0.12em]"
           style={{ color: isMake ? "var(--gus-navy)" : "#fff" }}
         >
-          {isMake ? "Money in" : "Money out"}
+          {copy.band}
         </span>
         <span
           className="font-display tnum text-2xl"
@@ -103,7 +108,7 @@ export default function TransactionDraftCard({
                 color: draft.type === option && option === "spend" ? "#fff" : "var(--gus-navy)",
               }}
             >
-              {option === "make" ? "Made" : "Spent"}
+              {directionCopy(selectedType, option).toggle}
             </button>
           ))}
         </div>
@@ -209,7 +214,7 @@ export default function TransactionDraftCard({
         <div className={categories.length > 0 ? "grid grid-cols-2 gap-3" : ""}>
           <label className="block min-w-0">
             <span className="font-display mb-1 block text-xs uppercase tracking-[0.1em] text-ink-2">
-              {isMake ? "Into" : "From"}
+              {copy.accountLabel}
             </span>
             <select
               data-testid="draft-account"

@@ -6,6 +6,7 @@ import type { Budget, Category } from "@/lib/types";
 import { getCurrencySymbol } from "@/lib/currency";
 import BudgetJar from "@/components/BudgetJar";
 import AppHeader from "@/components/AppHeader";
+import PageShell from "@/components/PageShell";
 
 export default function BudgetsClient({ currency }: { currency: string }) {
   const router = useRouter();
@@ -53,7 +54,7 @@ export default function BudgetsClient({ currency }: { currency: string }) {
   }
 
   return (
-    <div className="max-w-sm mx-auto px-4 sm:px-6 pt-10 sm:pt-16">
+    <PageShell>
       <AppHeader title="BUDGETS" onLogout={handleLogout} />
 
       {!budgets ? (
@@ -129,6 +130,6 @@ export default function BudgetsClient({ currency }: { currency: string }) {
           </form>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

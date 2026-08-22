@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Category } from "@/lib/types";
 import AppHeader from "@/components/AppHeader";
+import PageShell from "@/components/PageShell";
 
 const DEFAULT_EMOJI = "🏷️";
 
@@ -46,7 +47,7 @@ export default function CategoriesClient() {
   }
 
   return (
-    <div className="max-w-sm mx-auto px-4 sm:px-6 pt-10 sm:pt-16">
+    <PageShell>
       <AppHeader title="CATEGORIES" onLogout={handleLogout} />
 
       <div
@@ -114,6 +115,6 @@ export default function CategoriesClient() {
           </ul>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

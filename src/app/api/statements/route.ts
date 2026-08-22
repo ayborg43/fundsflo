@@ -5,6 +5,7 @@ import { listStatements, createStatement, setStatementAnalysis, deleteStatement 
 import { getChatCompletion } from "@/lib/ai/client";
 import { saveMessage } from "@/lib/ai/messages";
 import { friendlyAIError } from "@/lib/ai/errors";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_CONTENT_CHARS_FOR_AI = 20000;
@@ -24,6 +25,9 @@ export async function POST(request: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
+  const limited = checkRateLimit(userId, "statement");
+  if (!limited.ok) return rateLimitResponse(limited.retryAfterSeconds);
 
   const formData = await request.formData().catch(() => null);
   const file = formData?.get("file");

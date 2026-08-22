@@ -8,6 +8,7 @@ import { buildFinancialContext, buildSystemPrompt } from "@/lib/ai/context";
 import { extractChatIntent } from "@/lib/ai/extract";
 import { streamChatCompletion, type ChatMessage } from "@/lib/ai/client";
 import { friendlyAIError } from "@/lib/ai/errors";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET() {
   const userId = await getSessionUserId();
@@ -34,6 +35,11 @@ export async function POST(request: NextRequest) {
   if (!content) {
     return NextResponse.json({ error: "Message required" }, { status: 400 });
   }
+
+  //Each message costs two upstream calls (classify, then answer), so the guard
+  // goes here -- before either one is made.
+  const limited = checkRateLimit(userId, "chat");
+  if (!limited.ok) return rateLimitResponse(limited.retryAfterSeconds);
 
   // Does this message record money, or ask for a new category? Run this BEFORE
   // persisting anything: a draft isn't committed until the user confirms it on

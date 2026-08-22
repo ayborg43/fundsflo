@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { Statement } from "@/lib/statements";
 import AppHeader from "@/components/AppHeader";
+import PageShell from "@/components/PageShell";
 
 export default function StatementsClient() {
   const router = useRouter();
@@ -54,7 +55,7 @@ export default function StatementsClient() {
   }
 
   return (
-    <div className="max-w-sm mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-12">
+    <PageShell>
       <AppHeader title="STATEMENTS" onLogout={handleLogout} />
 
       <div
@@ -131,6 +132,6 @@ export default function StatementsClient() {
           </div>
         ))
       )}
-    </div>
+    </PageShell>
   );
 }
