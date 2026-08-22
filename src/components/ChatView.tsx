@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import Confetti, { makeConfettiPieces } from "@/components/Confetti";
 import Icon from "@/components/Icon";
+import Markdown from "@/components/Markdown";
 import ActionCard from "@/components/ActionCard";
 import { formatMoney } from "@/lib/format";
 import type { AccountSummary, Category } from "@/lib/types";
@@ -373,8 +374,8 @@ export default function ChatView({ email, currency }: { email: string; currency:
                   >
                     <div
                       data-testid={`chat-msg-${m.role}`}
-                      className={`bubble-in max-w-[85%] whitespace-pre-wrap rounded-2xl border-3 border-navy px-4 py-2.5 leading-relaxed ${
-                        m.role === "user" ? "" : "text-[0.97rem]"
+                      className={`bubble-in max-w-[85%] rounded-2xl border-3 border-navy px-4 py-2.5 leading-relaxed ${
+                        m.role === "user" ? "whitespace-pre-wrap" : "text-[0.97rem]"
                       }`}
                       style={{
                         backgroundColor:
@@ -382,7 +383,17 @@ export default function ChatView({ email, currency }: { email: string; currency:
                         borderWidth: 3,
                       }}
                     >
-                      {m.content || (m.role === "assistant" ? "…" : "")}
+                      {m.role === "assistant" ? (
+                        // Replies arrive as markdown. The user's own words are
+                        // shown exactly as typed, never reinterpreted.
+                        m.content ? (
+                          <Markdown text={m.content} />
+                        ) : (
+                          "…"
+                        )
+                      ) : (
+                        m.content
+                      )}
                     </div>
                   </div>
                 ))}

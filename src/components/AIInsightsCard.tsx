@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Markdown from "@/components/Markdown";
 
 type Kind = "recap" | "forecast";
 
@@ -65,9 +66,9 @@ export default function AIInsightsCard() {
       {result && (
         <div
           data-testid={`ai-${result.kind}-result`}
-          className="whitespace-pre-wrap rounded-2xl border-2 border-navy bg-white p-3 text-sm leading-relaxed text-navy"
+          className="rounded-2xl border-2 border-navy bg-white p-3 text-sm leading-relaxed text-navy"
         >
-          {result.text}
+          <Markdown text={result.text} />
         </div>
       )}
       {error && (

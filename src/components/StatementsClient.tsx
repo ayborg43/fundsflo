@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Statement } from "@/lib/statements";
 import AppHeader from "@/components/AppHeader";
 import PageShell from "@/components/PageShell";
+import Markdown from "@/components/Markdown";
 
 export default function StatementsClient() {
   const router = useRouter();
@@ -120,12 +121,12 @@ export default function StatementsClient() {
               </button>
             </div>
             {s.analysis ? (
-              <p
+              <div
                 data-testid={`statement-analysis-${s.id}`}
-                className="font-display text-sm text-navy whitespace-pre-wrap"
+                className="text-sm leading-relaxed text-navy"
               >
-                {s.analysis}
-              </p>
+                <Markdown text={s.analysis} />
+              </div>
             ) : (
               <p className="font-display text-sm text-navy/50 italic">No analysis available.</p>
             )}

@@ -200,7 +200,15 @@ const server = http.createServer((req, res) => {
 
     if (payload.stream) {
       res.writeHead(200, { "Content-Type": "text/event-stream" });
-      for (const chunk of ["Stub ", "answer ", "about ", "your ", "money."]) {
+      // A reply written the way models actually write them, for the renderer.
+      const chunks = /formatting probe/i.test(last)
+        ? [
+            "* \u{1F354} **Food budget expenses:** **$3,012** (lunch included)\n",
+            "* \u{1F6DE} **Other purchases:** **$65**\n\n",
+            "Total logged spending is **$3,077** so far.",
+          ]
+        : ["Stub ", "answer ", "about ", "your ", "money."];
+      for (const chunk of chunks) {
         res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: chunk } }] })}\n\n`);
       }
       res.write("data: [DONE]\n\n");
